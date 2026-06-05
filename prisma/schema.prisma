@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AiProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+}
+
+enum AiModel {
+  GPT_4O
+  GPT_4O_MINI
+  CLAUDE_35_SONNET
+  GEMINI_15_PRO
+  GEMINI_15_FLASH
+}
+
+enum Platform {
+  INSTAGRAM
+  TWITTER
+  LINKEDIN
+  TIKTOK
+  YOUTUBE
+  FACEBOOK
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  apiKeys           ApiKey[]
+  contentWorkspaces ContentWorkspace[]
+  settings          UserSettings?
+}
+
+model UserSettings {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultAiModel AiModel  @default(GPT_4O)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ApiKey {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     AiProvider
+  encryptedKey String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, provider])
+}
+
+model ContentWorkspace {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea      String?    @db.Text
+  imageUrls String[]   @default([])
+  linkUrl   String?
+  videoUrls String[]   @default([])
+  platforms Platform[]
+  aiModel   AiModel
+  outputs   Json       @default("{}")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
