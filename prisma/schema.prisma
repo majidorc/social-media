@@ -17,8 +17,8 @@ enum AiModel {
   GPT_4O
   GPT_4O_MINI
   CLAUDE_35_SONNET
-  GEMINI_15_PRO
-  GEMINI_15_FLASH
+  GEMINI_25_PRO
+  GEMINI_25_FLASH
 }
 
 enum Platform {

@@ -7,15 +7,8 @@ import { getDemoUser } from "@/lib/demo-user";
 import { decryptApiKey, encryptApiKey, maskApiKey } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
+import { aiModelSchema } from "@/lib/ai/models";
 import type { ApiKeyStatus, SettingsResponse } from "@/types";
-
-const aiModelSchema = z.enum([
-  "GPT_4O",
-  "GPT_4O_MINI",
-  "CLAUDE_35_SONNET",
-  "GEMINI_15_PRO",
-  "GEMINI_15_FLASH",
-]);
 
 const saveApiKeysSchema = z.object({
   openai: z.string().optional(),

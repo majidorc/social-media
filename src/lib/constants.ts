@@ -1,22 +1,13 @@
-import type { AiModel, Platform } from "@prisma/client";
+import type { Platform } from "@prisma/client";
+import { AI_MODEL_CONFIG, AI_MODEL_VALUES } from "@/lib/ai/models";
 
 export const APP_NAME = "AI Content Hub";
 
-export const AI_MODEL_OPTIONS: {
-  value: AiModel;
-  label: string;
-  provider: "OpenAI" | "Anthropic" | "Google";
-}[] = [
-  { value: "GPT_4O", label: "GPT-4o", provider: "OpenAI" },
-  { value: "GPT_4O_MINI", label: "GPT-4o Mini", provider: "OpenAI" },
-  {
-    value: "CLAUDE_35_SONNET",
-    label: "Claude 3.5 Sonnet",
-    provider: "Anthropic",
-  },
-  { value: "GEMINI_15_PRO", label: "Gemini 1.5 Pro", provider: "Google" },
-  { value: "GEMINI_15_FLASH", label: "Gemini 1.5 Flash", provider: "Google" },
-];
+export const AI_MODEL_OPTIONS = AI_MODEL_VALUES.map((value) => ({
+  value,
+  label: AI_MODEL_CONFIG[value].label,
+  provider: AI_MODEL_CONFIG[value].provider,
+}));
 
 export const PLATFORM_OPTIONS: {
   value: Platform;
@@ -68,13 +59,13 @@ export const API_KEY_PROVIDERS = [
     provider: "GOOGLE" as const,
     label: "Google Gemini",
     placeholder: "AIza...",
-    description: "Used for Gemini 1.5 Pro and Flash generations.",
+    description: "Used for Gemini 2.5 Pro and Flash generations.",
   },
   {
     provider: "ANTHROPIC" as const,
     label: "Anthropic",
     placeholder: "sk-ant-...",
-    description: "Used for Claude 3.5 Sonnet generations.",
+    description: "Used for Claude Sonnet generations.",
   },
 ];
 

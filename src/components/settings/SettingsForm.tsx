@@ -127,14 +127,14 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
       <Card
         title="API keys"
-        description="Keys are mock-encrypted before storage. Leave a field blank to keep the existing key."
+        description="Keys are encrypted before storage. Leave a field blank to keep the existing key."
       >
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-200/80">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            Endpoints: <code className="text-emerald-300">GET /api/settings</code>{" "}
-            and <code className="text-emerald-300">PUT /api/settings</code> (keys)
-            or <code className="text-emerald-300">PUT /api/settings?action=model</code>.
+            Keys are encrypted before storage. Generation calls provider APIs
+            directly (OpenAI, Anthropic, Google) using the model ID mapped in{" "}
+            <code className="text-emerald-300">src/lib/ai/models.ts</code>.
           </p>
         </div>
 

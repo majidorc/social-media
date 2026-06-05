@@ -58,7 +58,9 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Generation failed");
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Generation failed",
+        );
       }
 
       const result = data as GenerateResponse;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSettings, saveApiKeys, saveDefaultModel } from "@/lib/actions/settings";
+import { aiModelSchema } from "@/lib/ai/models";
 
 const saveKeysSchema = z.object({
   openai: z.string().optional(),
@@ -9,13 +10,7 @@ const saveKeysSchema = z.object({
 });
 
 const saveModelSchema = z.object({
-  defaultAiModel: z.enum([
-    "GPT_4O",
-    "GPT_4O_MINI",
-    "CLAUDE_35_SONNET",
-    "GEMINI_15_PRO",
-    "GEMINI_15_FLASH",
-  ]),
+  defaultAiModel: aiModelSchema,
 });
 
 export async function GET() {

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { AiModel, Prisma } from "@prisma/client";
+import {
+  generateContent,
+  MissingApiKeyError,
+} from "@/lib/ai/generate-content";
+import { aiModelSchema } from "@/lib/ai/models";
 import { getDemoUser } from "@/lib/demo-user";
-import { mockGenerateContent } from "@/lib/generation";
 import { prisma } from "@/lib/prisma";
 import type { GenerateResponse } from "@/types";
 
@@ -31,15 +35,7 @@ const generateSchema = z.object({
       ]),
     )
     .min(1, "Select at least one platform"),
-  aiModel: z
-    .enum([
-      "GPT_4O",
-      "GPT_4O_MINI",
-      "CLAUDE_35_SONNET",
-      "GEMINI_15_PRO",
-      "GEMINI_15_FLASH",
-    ])
-    .optional(),
+  aiModel: aiModelSchema.optional(),
 });
 
 export async function POST(request: Request) {
@@ -64,7 +60,7 @@ export async function POST(request: Request) {
     const model: AiModel = parsed.data.aiModel ?? settings.defaultAiModel;
     const linkUrl = parsed.data.linkUrl?.trim() || undefined;
 
-    const outputs = mockGenerateContent(
+    const outputs = await generateContent(
       {
         idea: parsed.data.idea,
         imageUrls: parsed.data.imageUrls,
@@ -97,10 +93,20 @@ export async function POST(request: Request) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("[POST /api/generate]", error);
-    return NextResponse.json(
-      { error: "Failed to generate content" },
-      { status: 500 },
-    );
+
+    if (error instanceof MissingApiKeyError) {
+      return NextResponse.json(
+        {
+          error: `Add your ${error.provider} API key in Settings before generating.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Failed to generate content";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
