@@ -1,0 +1,13 @@
+{
+  "name": "AI Content Hub",
+  "build": {
+    "build_pack": "dockerfile",
+    "base_directory": "/",
+    "dockerfile_location": "/Dockerfile"
+  },
+  "network": {
+    "ports": {
+      "expose": "3000"
+    }
+  }
+}

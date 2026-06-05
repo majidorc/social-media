@@ -5,19 +5,19 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --no-audit --no-fund --ignore-scripts
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN npx prisma generate && npm run build
 
 FROM base AS prod-deps
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev --no-audit --no-fund && npx prisma generate
+RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts && npx prisma generate
 
 FROM base AS runner
 ENV NODE_ENV=production
