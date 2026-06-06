@@ -3,6 +3,17 @@ import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
+function normalizeAppUrl(url: string | undefined): string {
+  return (url ?? "http://localhost:3000").replace(/\/$/, "");
+}
+
+// Trailing slashes break Google OAuth: ...com//api/auth/callback/google
+if (process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = normalizeAppUrl(process.env.NEXTAUTH_URL);
+}
+
+export const appUrl = normalizeAppUrl(process.env.NEXTAUTH_URL);
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
