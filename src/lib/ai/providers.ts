@@ -227,3 +227,31 @@ export async function callImagen(
     mimeType,
   };
 }
+
+export interface GeneratedVideoResult {
+  videoUrl: string;
+  mimeType: string;
+  placeholder: boolean;
+}
+
+const PLACEHOLDER_VIDEO_URL =
+  "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+
+/** Simulates TTS/video synthesis until a real provider is wired in. */
+export async function callVideoOrTtsAPI(
+  voiceoverText: string,
+  imagePrompt?: string,
+): Promise<GeneratedVideoResult> {
+  void voiceoverText;
+  void imagePrompt;
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 400);
+  });
+
+  return {
+    videoUrl: PLACEHOLDER_VIDEO_URL,
+    mimeType: "video/mp4",
+    placeholder: true,
+  };
+}

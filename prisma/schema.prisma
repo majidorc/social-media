@@ -99,7 +99,8 @@ model ApiKey {
 ///   platforms: PlatformOutput[],
 ///   blendedPrompt: string,
 ///   modelUsed: string (provider-native model id),
-///   visuals?: { imageUrl: string, promptUsed: string, imageModel: string }
+///   visuals?: { imageUrl: string, promptUsed: string, imageModel: string },
+///   video?: { url: string, script: string, voiceoverCopy: string }
 /// }
 model ContentWorkspace {
   id         String     @id @default(cuid())
@@ -112,6 +113,7 @@ model ContentWorkspace {
   platforms  Platform[]
   aiModel    String
   imageModel String?
+  enableVideo Boolean   @default(false)
   outputs    Json       @default("{}")
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt

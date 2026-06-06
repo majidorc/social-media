@@ -14,7 +14,12 @@ import { getDefaultModel, getSettings } from "@/lib/actions/settings";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { prisma } from "@/lib/prisma";
 import { toWorkspaceHistoryItem } from "@/lib/workspace-history";
-import type { GenerateResponse, GenerationHistoryResponse } from "@/types";
+import { deleteAllWorkspacesForUser } from "@/lib/workspace-delete";
+import type {
+  ClearHistoryResponse,
+  GenerateResponse,
+  GenerationHistoryResponse,
+} from "@/types";
 
 const optionalUrl = z
   .string()
@@ -43,6 +48,7 @@ const generateSchema = z.object({
     .min(1, "Select at least one platform"),
   aiModel: textModelSchema.optional(),
   imageModel: imageModelSchema.optional(),
+  enableVideo: z.boolean().optional().default(false),
 });
 
 export async function POST(request: Request) {
@@ -125,6 +131,7 @@ export async function POST(request: Request) {
         platforms: parsed.data.platforms,
         aiModel: textModel,
         imageModel,
+        enableVideo: parsed.data.enableVideo,
       },
       textModel,
       imageModel,
@@ -140,6 +147,7 @@ export async function POST(request: Request) {
         platforms: parsed.data.platforms,
         aiModel: textModel,
         imageModel: imageModel ?? null,
+        enableVideo: parsed.data.enableVideo,
         outputs: outputs as unknown as Prisma.InputJsonValue,
       },
     });
@@ -196,6 +204,26 @@ export async function GET() {
     console.error("[GET /api/generate]", error);
     return NextResponse.json(
       { error: "Failed to fetch generation history" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE() {
+  try {
+    const user = await requireCurrentUser();
+    const deletedCount = await deleteAllWorkspacesForUser(user.id);
+
+    const response: ClearHistoryResponse = {
+      success: true,
+      deletedCount,
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("[DELETE /api/generate]", error);
+    return NextResponse.json(
+      { error: "Failed to clear generation history." },
       { status: 500 },
     );
   }

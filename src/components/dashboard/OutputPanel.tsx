@@ -3,15 +3,25 @@
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 import { PLATFORM_OPTIONS } from "@/lib/constants";
 import {
   buildImageDownloadFilename,
+  buildVideoDownloadFilename,
   downloadImageAsset,
+  downloadVideoAsset,
 } from "@/lib/download-image";
 import type { GenerationOutputs } from "@/types";
-import { Copy, Download, ImageIcon, Loader2, Sparkles } from "lucide-react";
+import {
+  Copy,
+  Download,
+  ImageIcon,
+  Loader2,
+  Sparkles,
+  Video,
+} from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface OutputPanelProps {
   outputs: GenerationOutputs | null;
@@ -19,11 +29,26 @@ interface OutputPanelProps {
   error: string | null;
 }
 
+type OutputTab = "platforms" | "video";
+
 export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
+  const [activeTab, setActiveTab] = useState<OutputTab>("platforms");
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [copiedVideoScript, setCopiedVideoScript] = useState(false);
+  const [copiedVoiceover, setCopiedVoiceover] = useState(false);
+  const [isDownloadingImage, setIsDownloadingImage] = useState(false);
+  const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (outputs?.video) {
+      setActiveTab("video");
+      return;
+    }
+
+    setActiveTab("platforms");
+  }, [outputs?.video?.url]);
 
   const copyContent = async (platform: string, content: string) => {
     await navigator.clipboard.writeText(content);
@@ -31,37 +56,54 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
     setTimeout(() => setCopiedPlatform(null), 2000);
   };
 
-  const copyImagePrompt = async (prompt: string) => {
-    await navigator.clipboard.writeText(prompt);
-    setCopiedPrompt(true);
-    setTimeout(() => setCopiedPrompt(false), 2000);
+  const copyText = async (
+    text: string,
+    setCopied: (value: boolean) => void,
+  ) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadImage = async (imageUrl: string) => {
     setDownloadError(null);
-    setIsDownloading(true);
+    setIsDownloadingImage(true);
 
     try {
       await downloadImageAsset(imageUrl, buildImageDownloadFilename());
     } catch {
-      setDownloadError("Download failed. Try again in a moment.");
+      setDownloadError("Image download failed. Try again in a moment.");
     } finally {
-      setIsDownloading(false);
+      setIsDownloadingImage(false);
+    }
+  };
+
+  const handleDownloadVideo = async (videoUrl: string) => {
+    setDownloadError(null);
+    setIsDownloadingVideo(true);
+
+    try {
+      await downloadVideoAsset(videoUrl, buildVideoDownloadFilename());
+    } catch {
+      setDownloadError("Video download failed. Try again in a moment.");
+    } finally {
+      setIsDownloadingVideo(false);
     }
   };
 
   const imageModelLabel = outputs?.visuals?.imageModel ?? null;
+  const hasVideo = Boolean(outputs?.video?.url);
 
   return (
     <Card
       title="Generated outputs"
-      description="Platform-specific content and optional AI graphics appear here after generation."
+      description="Platform copy, optional graphics, and video assets appear here after generation."
       className="h-full"
     >
       {isLoading ? (
         <div className="flex min-h-80 flex-col items-center justify-center gap-3 text-zinc-400">
           <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
-          <p className="text-sm">Generating platform copy and visual assets...</p>
+          <p className="text-sm">Generating platform copy and media assets...</p>
         </div>
       ) : error ? (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
@@ -72,7 +114,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
           <Sparkles className="h-10 w-10 text-zinc-700" />
           <p className="max-w-sm text-sm">
             Add any combination of inputs, pick your platforms, and click
-            Generate to preview tailored content and optional graphics.
+            Generate to preview tailored content and optional media.
           </p>
         </div>
       ) : (
@@ -100,17 +142,17 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   type="button"
                   variant="secondary"
                   size="sm"
-                  disabled={isDownloading}
+                  disabled={isDownloadingImage}
                   onClick={() =>
                     handleDownloadImage(outputs.visuals?.imageUrl ?? "")
                   }
                 >
-                  {isDownloading ? (
+                  {isDownloadingImage ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Download className="h-3.5 w-3.5" />
                   )}
-                  {isDownloading ? "Downloading..." : "Download image"}
+                  {isDownloadingImage ? "Downloading..." : "Download image"}
                 </Button>
               </div>
               <div className="relative aspect-square w-full bg-zinc-900">
@@ -123,11 +165,6 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   className="object-contain"
                 />
               </div>
-              {downloadError ? (
-                <p className="border-t border-zinc-800 px-4 py-2 text-xs text-red-300">
-                  {downloadError}
-                </p>
-              ) : null}
               <div className="space-y-3 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
@@ -136,7 +173,10 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   <button
                     type="button"
                     onClick={() =>
-                      copyImagePrompt(outputs.visuals?.promptUsed ?? "")
+                      void copyText(
+                        outputs.visuals?.promptUsed ?? "",
+                        setCopiedPrompt,
+                      )
                     }
                     className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
                   >
@@ -160,40 +200,167 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
             </div>
           ) : null}
 
-          <div className="space-y-4">
-            {outputs.platforms.map((item) => {
-              const label =
-                PLATFORM_OPTIONS.find(
-                  (option) => option.value === item.platform,
-                )?.label ?? item.platform;
+          {downloadError ? (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-300">
+              {downloadError}
+            </p>
+          ) : null}
 
-              return (
-                <article
-                  key={item.platform}
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4"
+          <div className="space-y-4">
+            <div className="flex gap-2 border-b border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setActiveTab("platforms")}
+                className={cn(
+                  "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+                  activeTab === "platforms"
+                    ? "border-violet-500 text-violet-200"
+                    : "border-transparent text-zinc-500 hover:text-zinc-200",
+                )}
+              >
+                Platforms
+              </button>
+              {hasVideo ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("video")}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+                    activeTab === "video"
+                      ? "border-violet-500 text-violet-200"
+                      : "border-transparent text-zinc-500 hover:text-zinc-200",
+                  )}
                 >
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-zinc-100">
-                        {label}
-                      </h3>
-                      <Badge>{item.platform}</Badge>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyContent(item.platform, item.content)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      {copiedPlatform === item.platform ? "Copied" : "Copy"}
-                    </button>
+                  <Video className="h-3.5 w-3.5" />
+                  Video
+                </button>
+              ) : null}
+            </div>
+
+            {activeTab === "video" && outputs.video ? (
+              <article className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/60">
+                <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4 text-violet-400" />
+                    <h3 className="text-sm font-semibold text-zinc-100">
+                      Generated video
+                    </h3>
+                    <Badge>Preview</Badge>
                   </div>
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-300">
-                    {item.content}
-                  </pre>
-                </article>
-              );
-            })}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={isDownloadingVideo}
+                    onClick={() => handleDownloadVideo(outputs.video?.url ?? "")}
+                  >
+                    {isDownloadingVideo ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    {isDownloadingVideo ? "Downloading..." : "Download video"}
+                  </Button>
+                </div>
+                <div className="bg-black p-3">
+                  <video
+                    src={outputs.video.url}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="aspect-video w-full rounded-lg bg-zinc-900"
+                  >
+                    Your browser does not support HTML5 video playback.
+                  </video>
+                </div>
+                <div className="space-y-4 p-4">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Video script
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void copyText(
+                            outputs.video?.script ?? "",
+                            setCopiedVideoScript,
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {copiedVideoScript ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-300">
+                      {outputs.video.script}
+                    </pre>
+                  </div>
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                        Voiceover copy
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void copyText(
+                            outputs.video?.voiceoverCopy ?? "",
+                            setCopiedVoiceover,
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {copiedVoiceover ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-sm leading-relaxed text-zinc-300">
+                      {outputs.video.voiceoverCopy}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ) : (
+              <div className="space-y-4">
+                {outputs.platforms.map((item) => {
+                  const label =
+                    PLATFORM_OPTIONS.find(
+                      (option) => option.value === item.platform,
+                    )?.label ?? item.platform;
+
+                  return (
+                    <article
+                      key={item.platform}
+                      className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold text-zinc-100">
+                            {label}
+                          </h3>
+                          <Badge>{item.platform}</Badge>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void copyContent(item.platform, item.content)
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          {copiedPlatform === item.platform ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-300">
+                        {item.content}
+                      </pre>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ type WorkspaceRecord = {
   platforms: WorkspaceHistoryItem["platforms"];
   aiModel: string;
   imageModel: string | null;
+  enableVideo: boolean;
   outputs: Prisma.JsonValue;
   createdAt: Date;
 };
@@ -58,6 +59,7 @@ export function toWorkspaceDetail(workspace: WorkspaceRecord): WorkspaceDetail {
     imageUrls: workspace.imageUrls,
     linkUrl: workspace.linkUrl,
     videoUrls: workspace.videoUrls,
+    enableVideo: workspace.enableVideo,
     outputs: parseGenerationOutputs(workspace.outputs),
   };
 }

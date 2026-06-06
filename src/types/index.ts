@@ -14,6 +14,12 @@ export interface VisualOutput {
   imageModel: string;
 }
 
+export interface VideoOutput {
+  url: string;
+  script: string;
+  voiceoverCopy: string;
+}
+
 export interface GenerationOutputs {
   platforms: PlatformOutput[];
   blendedPrompt: string;
@@ -21,6 +27,7 @@ export interface GenerationOutputs {
   generatedAt: string;
   visualImagePrompt?: string;
   visuals?: VisualOutput;
+  video?: VideoOutput;
 }
 
 export interface GenerationInput {
@@ -31,6 +38,7 @@ export interface GenerationInput {
   platforms: Platform[];
   aiModel?: string;
   imageModel?: string;
+  enableVideo?: boolean;
 }
 
 export interface ApiKeyStatus {
@@ -62,6 +70,7 @@ export interface WorkspaceDetail extends WorkspaceHistoryItem {
   imageUrls: string[];
   linkUrl: string | null;
   videoUrls: string[];
+  enableVideo: boolean;
   outputs: GenerationOutputs;
 }
 
@@ -71,6 +80,20 @@ export interface GenerationHistoryResponse {
 
 export interface WorkspaceDetailResponse {
   workspace: WorkspaceDetail;
+}
+
+export interface DeleteWorkspaceResponse {
+  success: true;
+  deletedId: string;
+}
+
+export interface ClearHistoryResponse {
+  success: true;
+  deletedCount: number;
+}
+
+export interface HistoryMutationErrorResponse {
+  error: string;
 }
 
 export type { LiveModelCatalog, LiveModelOption } from "@/lib/ai/model-types";

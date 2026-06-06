@@ -14,6 +14,7 @@ import {
   callGemini,
   callImagen,
   callOpenAI,
+  callVideoOrTtsAPI,
 } from "@/lib/ai/providers";
 import type { GenerationInput, GenerationOutputs } from "@/types";
 
@@ -85,11 +86,11 @@ export async function generateContentWithVisuals(
 ): Promise<GenerationOutputs> {
   const blendedPrompt = buildBlendedPrompt(input);
   const includeVisualPrompt = Boolean(imageModel);
-  const messages = buildGenerationPrompt(
-    input,
-    blendedPrompt,
+  const includeVideoMetadata = Boolean(input.enableVideo);
+  const messages = buildGenerationPrompt(input, blendedPrompt, {
     includeVisualPrompt,
-  );
+    includeVideoMetadata,
+  });
 
   const rawResponse = await callTextModel(textModel, messages);
   const parsed = parseModelJsonResponse(rawResponse);
@@ -102,21 +103,47 @@ export async function generateContentWithVisuals(
     visualImagePrompt: parsed.visualImagePrompt,
   };
 
-  if (!imageModel) {
-    return baseOutput;
+  let result: GenerationOutputs = { ...baseOutput };
+
+  if (imageModel) {
+    const imagePrompt =
+      parsed.visualImagePrompt?.trim() ||
+      buildFallbackImagePrompt(input, blendedPrompt);
+
+    const visuals = await callImageModel(imageModel, imagePrompt);
+
+    result = {
+      ...result,
+      visualImagePrompt: imagePrompt,
+      visuals,
+    };
   }
 
-  const imagePrompt =
-    parsed.visualImagePrompt?.trim() ||
-    buildFallbackImagePrompt(input, blendedPrompt);
+  if (input.enableVideo) {
+    const videoMetadata = parsed.videoMetadata;
 
-  const visuals = await callImageModel(imageModel, imagePrompt);
+    if (!videoMetadata?.voiceoverText) {
+      throw new Error(
+        "Video generation was enabled, but the model did not return video_metadata.",
+      );
+    }
 
-  return {
-    ...baseOutput,
-    visualImagePrompt: imagePrompt,
-    visuals,
-  };
+    const videoAsset = await callVideoOrTtsAPI(
+      videoMetadata.voiceoverText,
+      result.visualImagePrompt ?? blendedPrompt,
+    );
+
+    result = {
+      ...result,
+      video: {
+        url: videoAsset.videoUrl,
+        script: videoMetadata.videoScript,
+        voiceoverCopy: videoMetadata.voiceoverText,
+      },
+    };
+  }
+
+  return result;
 }
 
 function buildFallbackImagePrompt(

@@ -11,7 +11,11 @@ import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
 import { useLiveModels } from "@/hooks/useLiveModels";
-import { notifyGenerationHistoryUpdated } from "@/lib/generation-history-events";
+import {
+  GENERATION_HISTORY_DELETED_EVENT,
+  notifyGenerationHistoryUpdated,
+  type GenerationHistoryDeletedDetail,
+} from "@/lib/generation-history-events";
 import type { GenerateResponse, GenerationOutputs, WorkspaceDetailResponse } from "@/types";
 import Link from "next/link";
 import { Loader2, Sparkles } from "lucide-react";
@@ -44,10 +48,27 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
   const [platforms, setPlatforms] = useState<Platform[]>(["INSTAGRAM", "TWITTER"]);
   const [modelOverride, setModelOverride] = useState("");
   const [imageModel, setImageModel] = useState("");
+  const [enableVideo, setEnableVideo] = useState(false);
   const [outputs, setOutputs] = useState<GenerationOutputs | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const resetDashboardState = useCallback(() => {
+    setIdea("");
+    setImageUrl("");
+    setLinkUrl("");
+    setVideoUrl("");
+    setImageFileName(null);
+    setVideoFileName(null);
+    setPlatforms(["INSTAGRAM", "TWITTER"]);
+    setModelOverride("");
+    setImageModel("");
+    setEnableVideo(false);
+    setOutputs(null);
+    setError(null);
+    loadedWorkspaceRef.current = null;
+  }, []);
 
   const applyWorkspace = useCallback((workspace: WorkspaceDetailResponse["workspace"]) => {
     setIdea(workspace.idea ?? "");
@@ -59,6 +80,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     setPlatforms(workspace.platforms);
     setModelOverride(workspace.aiModel);
     setImageModel(workspace.imageModel ?? "");
+    setEnableVideo(workspace.enableVideo);
     setOutputs(workspace.outputs);
     setError(null);
   }, []);
@@ -117,8 +139,47 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     };
   }, [applyWorkspace, workspaceId]);
 
+  useEffect(() => {
+    const handleHistoryDeleted = (event: Event) => {
+      const detail = (event as CustomEvent<GenerationHistoryDeletedDetail>).detail;
+      const deletedId = detail.workspaceId;
+      const clearedAll = detail.clearedAll === true;
+
+      if (
+        clearedAll ||
+        (deletedId &&
+          (workspaceId === deletedId || loadedWorkspaceRef.current === deletedId))
+      ) {
+        resetDashboardState();
+        router.replace("/dashboard");
+      }
+    };
+
+    window.addEventListener(GENERATION_HISTORY_DELETED_EVENT, handleHistoryDeleted);
+    return () => {
+      window.removeEventListener(
+        GENERATION_HISTORY_DELETED_EVENT,
+        handleHistoryDeleted,
+      );
+    };
+  }, [resetDashboardState, router, workspaceId]);
+
   const canGenerate =
     !modelsLoading && (defaultModel !== null || modelOverride !== "");
+
+  const generateButtonLabel = (() => {
+    if (isLoading) {
+      if (enableVideo && imageModel) return "Generating copy, image & video...";
+      if (enableVideo) return "Generating copy & video...";
+      if (imageModel) return "Generating copy & image...";
+      return "Generating...";
+    }
+
+    if (enableVideo && imageModel) return "Generate content, image & video";
+    if (enableVideo) return "Generate content & video";
+    if (imageModel) return "Generate content & image";
+    return "Generate content";
+  })();
 
   const handleGenerate = async () => {
     if (platforms.length === 0) {
@@ -143,6 +204,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
         platforms,
         aiModel: modelOverride || undefined,
         imageModel: imageModel || undefined,
+        enableVideo,
       };
 
       const response = await fetch("/api/generate", {
@@ -279,6 +341,23 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
                 value={imageModel}
                 onChange={setImageModel}
               />
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-4 transition-colors hover:border-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={enableVideo}
+                  onChange={(event) => setEnableVideo(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-violet-600 focus:ring-violet-500 focus:ring-offset-0"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-zinc-100">
+                    Generate Video Script &amp; Asset
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-zinc-500">
+                    Adds CapCut-ready scene directions, voiceover copy, and a
+                    preview video placeholder alongside your platform posts.
+                  </span>
+                </span>
+              </label>
               <Button
                 type="button"
                 size="lg"
@@ -287,13 +366,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
                 disabled={isLoading || !canGenerate}
               >
                 <Sparkles className="h-4 w-4" />
-                {isLoading
-                  ? imageModel
-                    ? "Generating copy & image..."
-                    : "Generating..."
-                  : imageModel
-                    ? "Generate content & image"
-                    : "Generate content"}
+                {generateButtonLabel}
               </Button>
             </div>
           </Card>

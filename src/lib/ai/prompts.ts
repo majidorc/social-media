@@ -2,6 +2,11 @@ import type { Platform } from "@prisma/client";
 import { PLATFORM_OPTIONS } from "@/lib/constants";
 import type { GenerationInput } from "@/types";
 
+export interface ParsedVideoMetadata {
+  videoScript: string;
+  voiceoverText: string;
+}
+
 export function buildBlendedPrompt(input: GenerationInput): string {
   const sections: string[] = [];
 
@@ -28,11 +33,46 @@ export function buildBlendedPrompt(input: GenerationInput): string {
   return sections.join("\n");
 }
 
+function buildJsonShape(
+  includeVisualPrompt: boolean,
+  includeVideoMetadata: boolean,
+): string {
+  const fields: string[] = [
+    `"platforms": [
+    {
+      "platform": "INSTAGRAM",
+      "content": "full post text",
+      "metadata": { "hook": "optional hook" }
+    }
+  ]`,
+  ];
+
+  if (includeVisualPrompt) {
+    fields.push(
+      `"visual_image_prompt": "detailed English prompt for image generation"`,
+    );
+  }
+
+  if (includeVideoMetadata) {
+    fields.push(`"video_metadata": {
+    "video_script": "Scene 1 (0-3s): [TEXT OVERLAY: Hook] Visual description...\\nScene 2 (3-8s): ...",
+    "voiceover_text": "Exact narration script for text-to-speech, conversational and concise."
+  }`);
+  }
+
+  return `{\n  ${fields.join(",\n  ")}\n}`;
+}
+
 export function buildGenerationPrompt(
   input: GenerationInput,
   blendedPrompt: string,
-  includeVisualPrompt: boolean,
+  options: {
+    includeVisualPrompt: boolean;
+    includeVideoMetadata: boolean;
+  },
 ): { system: string; user: string } {
+  const { includeVisualPrompt, includeVideoMetadata } = options;
+
   const platformInstructions = input.platforms
     .map((platform) => {
       const option = PLATFORM_OPTIONS.find((item) => item.value === platform);
@@ -51,26 +91,15 @@ export function buildGenerationPrompt(
 - Do not reference social media UI or text overlays in the image prompt unless essential to the concept.`
     : "";
 
-  const jsonShape = includeVisualPrompt
-    ? `{
-  "platforms": [
-    {
-      "platform": "INSTAGRAM",
-      "content": "full post text",
-      "metadata": { "hook": "optional hook" }
-    }
-  ],
-  "visual_image_prompt": "detailed English prompt for image generation"
-}`
-    : `{
-  "platforms": [
-    {
-      "platform": "INSTAGRAM",
-      "content": "full post text",
-      "metadata": { "hook": "optional hook" }
-    }
-  ]
-}`;
+  const videoMetadataRule = includeVideoMetadata
+    ? `
+- Include "video_metadata" with:
+  - "video_script": a scene-by-scene short-form video plan with explicit [TEXT OVERLAY: ...] markers for editors/CapCut.
+  - "voiceover_text": the exact spoken narration for a text-to-speech model (no scene labels, ready to read aloud).
+- Align the video script and voiceover with the same creative direction as the platform copy.`
+    : "";
+
+  const jsonShape = buildJsonShape(includeVisualPrompt, includeVideoMetadata);
 
   const system = `You are an expert social media content strategist. Generate platform-specific content based on the user's inputs.
 
@@ -79,12 +108,20 @@ Rules:
 - Each platform gets unique, tailored copy (not copy-paste).
 - Twitter/X must respect character limits.
 - Instagram should include a hook and optional CapCut/video script notes.
-- LinkedIn should use a professional, thought-leadership tone.${visualPromptRule}
+- LinkedIn should use a professional, thought-leadership tone.${visualPromptRule}${videoMetadataRule}
 
 JSON shape:
 ${jsonShape}
 
 Platform keys must be exactly: ${input.platforms.join(", ")}.`;
+
+  const extras: string[] = [];
+  if (includeVisualPrompt) {
+    extras.push("Also include visual_image_prompt for a companion social graphic.");
+  }
+  if (includeVideoMetadata) {
+    extras.push("Also include video_metadata for short-form video production.");
+  }
 
   const user = `Inputs:
 ${blendedPrompt}
@@ -93,9 +130,7 @@ Platforms to generate:
 ${platformInstructions}
 
 Generate one entry per platform in the JSON response.${
-    includeVisualPrompt
-      ? " Also include visual_image_prompt for a companion social graphic."
-      : ""
+    extras.length ? ` ${extras.join(" ")}` : ""
   }`;
 
   return { system, user };
@@ -108,6 +143,7 @@ export function parseModelJsonResponse(raw: string): {
     metadata?: Record<string, string | number | boolean>;
   }>;
   visualImagePrompt?: string;
+  videoMetadata?: ParsedVideoMetadata;
 } {
   const trimmed = raw.trim();
   const jsonText = trimmed.startsWith("```")
@@ -121,6 +157,10 @@ export function parseModelJsonResponse(raw: string): {
       metadata?: Record<string, string | number | boolean>;
     }>;
     visual_image_prompt?: string;
+    video_metadata?: {
+      video_script?: string;
+      voiceover_text?: string;
+    };
   };
 
   if (!parsed.platforms?.length) {
@@ -128,9 +168,15 @@ export function parseModelJsonResponse(raw: string): {
   }
 
   const visualImagePrompt = parsed.visual_image_prompt?.trim();
+  const videoScript = parsed.video_metadata?.video_script?.trim();
+  const voiceoverText = parsed.video_metadata?.voiceover_text?.trim();
 
   return {
     platforms: parsed.platforms,
     visualImagePrompt: visualImagePrompt || undefined,
+    videoMetadata:
+      videoScript && voiceoverText
+        ? { videoScript, voiceoverText }
+        : undefined,
   };
 }

@@ -28,6 +28,10 @@ export function buildImageDownloadFilename(prefix = "ai-hub"): string {
   return `${prefix}-${Date.now()}.png`;
 }
 
+export function buildVideoDownloadFilename(prefix = "ai-hub"): string {
+  return `${prefix}-${Date.now()}.mp4`;
+}
+
 export async function downloadImageAsset(
   imageUrl: string,
   filename = buildImageDownloadFilename(),
@@ -53,6 +57,38 @@ export async function downloadImageAsset(
 
     if (!proxyResponse.ok) {
       throw new Error("Could not download image.");
+    }
+
+    const blob = await proxyResponse.blob();
+    triggerBlobDownload(blob, filename);
+  }
+}
+
+export async function downloadVideoAsset(
+  videoUrl: string,
+  filename = buildVideoDownloadFilename(),
+): Promise<void> {
+  if (videoUrl.startsWith("data:")) {
+    triggerBlobDownload(dataUrlToBlob(videoUrl), filename);
+    return;
+  }
+
+  try {
+    const response = await fetch(videoUrl, { mode: "cors" });
+    if (!response.ok) {
+      throw new Error("Fetch failed");
+    }
+
+    const blob = await response.blob();
+    triggerBlobDownload(blob, filename);
+    return;
+  } catch {
+    const proxyResponse = await fetch(
+      `/api/download-image?url=${encodeURIComponent(videoUrl)}`,
+    );
+
+    if (!proxyResponse.ok) {
+      throw new Error("Could not download video.");
     }
 
     const blob = await proxyResponse.blob();
