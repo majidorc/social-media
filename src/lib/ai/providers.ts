@@ -3,6 +3,11 @@ interface ChatMessage {
   user: string;
 }
 
+export interface GeneratedImageResult {
+  imageUrl: string;
+  mimeType: string;
+}
+
 export async function callOpenAI(
   apiKey: string,
   model: string,
@@ -117,4 +122,108 @@ export async function callGemini(
   }
 
   return text;
+}
+
+export async function callDalle(
+  apiKey: string,
+  model: string,
+  prompt: string,
+): Promise<GeneratedImageResult> {
+  const response = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+      response_format: "b64_json",
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenAI Images API error (${response.status}): ${error}`);
+  }
+
+  const data = (await response.json()) as {
+    data?: Array<{ b64_json?: string; url?: string }>;
+  };
+
+  const image = data.data?.[0];
+  const b64 = image?.b64_json;
+
+  if (b64) {
+    return {
+      imageUrl: `data:image/png;base64,${b64}`,
+      mimeType: "image/png",
+    };
+  }
+
+  if (image?.url) {
+    return {
+      imageUrl: image.url,
+      mimeType: "image/png",
+    };
+  }
+
+  throw new Error("OpenAI Images API returned no image data.");
+}
+
+export async function callImagen(
+  apiKey: string,
+  model: string,
+  prompt: string,
+): Promise<GeneratedImageResult> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${encodeURIComponent(apiKey)}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt }],
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: "1:1",
+        personGeneration: "allow_adult",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Imagen API error (${response.status}): ${error}`);
+  }
+
+  const data = (await response.json()) as {
+    predictions?: Array<{
+      bytesBase64Encoded?: string;
+      mimeType?: string;
+      raiFilteredReason?: string;
+    }>;
+  };
+
+  const prediction = data.predictions?.[0];
+
+  if (prediction?.raiFilteredReason) {
+    throw new Error(
+      `Imagen blocked this prompt: ${prediction.raiFilteredReason}`,
+    );
+  }
+
+  const b64 = prediction?.bytesBase64Encoded;
+  if (!b64) {
+    throw new Error("Imagen API returned no image data.");
+  }
+
+  const mimeType = prediction.mimeType ?? "image/png";
+
+  return {
+    imageUrl: `data:${mimeType};base64,${b64}`,
+    mimeType,
+  };
 }

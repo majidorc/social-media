@@ -31,6 +31,7 @@ export function buildBlendedPrompt(input: GenerationInput): string {
 export function buildGenerationPrompt(
   input: GenerationInput,
   blendedPrompt: string,
+  includeVisualPrompt: boolean,
 ): { system: string; user: string } {
   const platformInstructions = input.platforms
     .map((platform) => {
@@ -42,17 +43,26 @@ export function buildGenerationPrompt(
     })
     .join("\n");
 
-  const system = `You are an expert social media content strategist. Generate platform-specific content based on the user's inputs.
+  const visualPromptRule = includeVisualPrompt
+    ? `
+- Include "visual_image_prompt": a single highly descriptive English prompt for an AI image generator.
+- The image prompt must match the theme, tone, and subject of the generated copy.
+- Describe composition, lighting, style, colors, and mood. No markdown, no quotes wrapping the whole prompt.
+- Do not reference social media UI or text overlays in the image prompt unless essential to the concept.`
+    : "";
 
-Rules:
-- Return ONLY valid JSON, no markdown fences.
-- Each platform gets unique, tailored copy (not copy-paste).
-- Twitter/X must respect character limits.
-- Instagram should include a hook and optional CapCut/video script notes.
-- LinkedIn should use a professional, thought-leadership tone.
-
-JSON shape:
-{
+  const jsonShape = includeVisualPrompt
+    ? `{
+  "platforms": [
+    {
+      "platform": "INSTAGRAM",
+      "content": "full post text",
+      "metadata": { "hook": "optional hook" }
+    }
+  ],
+  "visual_image_prompt": "detailed English prompt for image generation"
+}`
+    : `{
   "platforms": [
     {
       "platform": "INSTAGRAM",
@@ -60,7 +70,19 @@ JSON shape:
       "metadata": { "hook": "optional hook" }
     }
   ]
-}
+}`;
+
+  const system = `You are an expert social media content strategist. Generate platform-specific content based on the user's inputs.
+
+Rules:
+- Return ONLY valid JSON, no markdown fences.
+- Each platform gets unique, tailored copy (not copy-paste).
+- Twitter/X must respect character limits.
+- Instagram should include a hook and optional CapCut/video script notes.
+- LinkedIn should use a professional, thought-leadership tone.${visualPromptRule}
+
+JSON shape:
+${jsonShape}
 
 Platform keys must be exactly: ${input.platforms.join(", ")}.`;
 
@@ -70,7 +92,11 @@ ${blendedPrompt}
 Platforms to generate:
 ${platformInstructions}
 
-Generate one entry per platform in the JSON response.`;
+Generate one entry per platform in the JSON response.${
+    includeVisualPrompt
+      ? " Also include visual_image_prompt for a companion social graphic."
+      : ""
+  }`;
 
   return { system, user };
 }
@@ -81,6 +107,7 @@ export function parseModelJsonResponse(raw: string): {
     content: string;
     metadata?: Record<string, string | number | boolean>;
   }>;
+  visualImagePrompt?: string;
 } {
   const trimmed = raw.trim();
   const jsonText = trimmed.startsWith("```")
@@ -93,11 +120,17 @@ export function parseModelJsonResponse(raw: string): {
       content: string;
       metadata?: Record<string, string | number | boolean>;
     }>;
+    visual_image_prompt?: string;
   };
 
   if (!parsed.platforms?.length) {
     throw new Error("Model response did not include platform outputs.");
   }
 
-  return { platforms: parsed.platforms };
+  const visualImagePrompt = parsed.visual_image_prompt?.trim();
+
+  return {
+    platforms: parsed.platforms,
+    visualImagePrompt: visualImagePrompt || undefined,
+  };
 }

@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import type { AiModel, Prisma } from "@prisma/client";
-import { isModelAvailable } from "@/lib/ai/available-models";
+import type { AiImageModel, AiModel, Prisma } from "@prisma/client";
 import {
-  generateContent,
+  isImageModelAvailable,
+  isModelAvailable,
+} from "@/lib/ai/available-models";
+import {
+  generateContentWithVisuals,
   MissingApiKeyError,
 } from "@/lib/ai/generate-content";
-import { aiModelSchema } from "@/lib/ai/models";
+import { aiImageModelSchema, aiModelSchema } from "@/lib/ai/models";
 import { getDefaultModel, getSettings } from "@/lib/actions/settings";
 import { getDemoUser } from "@/lib/demo-user";
 import { prisma } from "@/lib/prisma";
@@ -38,6 +41,7 @@ const generateSchema = z.object({
     )
     .min(1, "Select at least one platform"),
   aiModel: aiModelSchema.optional(),
+  imageModel: aiImageModelSchema.optional(),
 });
 
 export async function POST(request: Request) {
@@ -58,40 +62,55 @@ export async function POST(request: Request) {
       getDefaultModel(),
     ]);
 
-    let model: AiModel | null = resolvedDefault;
+    let textModel: AiModel | null = resolvedDefault;
 
     if (parsed.data.aiModel) {
       if (!isModelAvailable(parsed.data.aiModel, settings.apiKeys)) {
         return NextResponse.json(
           {
             error:
-              "That model requires an API key you have not configured yet. Update Settings or pick another model.",
+              "That text model requires an API key you have not configured yet. Update Settings or pick another model.",
           },
           { status: 400 },
         );
       }
 
-      model = parsed.data.aiModel;
+      textModel = parsed.data.aiModel;
     }
 
-    if (!model) {
+    if (!textModel) {
       return NextResponse.json(
         { error: "Add an API key in Settings before generating content." },
         { status: 400 },
       );
     }
+
+    const imageModel: AiImageModel | undefined = parsed.data.imageModel;
+
+    if (imageModel && !isImageModelAvailable(imageModel, settings.apiKeys)) {
+      return NextResponse.json(
+        {
+          error:
+            "That image model requires an API key you have not configured yet. Update Settings or pick another model.",
+        },
+        { status: 400 },
+      );
+    }
+
     const linkUrl = parsed.data.linkUrl?.trim() || undefined;
 
-    const outputs = await generateContent(
+    const outputs = await generateContentWithVisuals(
       {
         idea: parsed.data.idea,
         imageUrls: parsed.data.imageUrls,
         linkUrl,
         videoUrls: parsed.data.videoUrls,
         platforms: parsed.data.platforms,
-        aiModel: model,
+        aiModel: textModel,
+        imageModel,
       },
-      model,
+      textModel,
+      imageModel,
     );
 
     const workspace = await prisma.contentWorkspace.create({
@@ -102,7 +121,8 @@ export async function POST(request: Request) {
         linkUrl,
         videoUrls: parsed.data.videoUrls ?? [],
         platforms: parsed.data.platforms,
-        aiModel: model,
+        aiModel: textModel,
+        imageModel: imageModel ?? null,
         outputs: outputs as unknown as Prisma.InputJsonValue,
       },
     });
@@ -145,6 +165,7 @@ export async function GET() {
         idea: true,
         platforms: true,
         aiModel: true,
+        imageModel: true,
         createdAt: true,
       },
     });

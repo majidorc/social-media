@@ -21,6 +21,12 @@ enum AiModel {
   GEMINI_25_FLASH
 }
 
+enum AiImageModel {
+  IMAGEN_3_PRO
+  IMAGEN_3_FAST
+  DALL_E_3
+}
+
 enum Platform {
   INSTAGRAM
   TWITTER
@@ -63,17 +69,27 @@ model ApiKey {
   @@unique([userId, provider])
 }
 
+/// outputs JSON shape:
+/// {
+///   platforms: PlatformOutput[],
+///   blendedPrompt: string,
+///   modelUsed: AiModel,
+///   generatedAt: string,
+///   visualImagePrompt?: string,
+///   visuals?: { imageUrl: string, promptUsed: string, imageModel: AiImageModel }
+/// }
 model ContentWorkspace {
-  id        String     @id @default(cuid())
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  idea      String?    @db.Text
-  imageUrls String[]   @default([])
-  linkUrl   String?
-  videoUrls String[]   @default([])
-  platforms Platform[]
-  aiModel   AiModel
-  outputs   Json       @default("{}")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea       String?       @db.Text
+  imageUrls  String[]      @default([])
+  linkUrl    String?
+  videoUrls  String[]      @default([])
+  platforms  Platform[]
+  aiModel    AiModel
+  imageModel AiImageModel?
+  outputs    Json          @default("{}")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }

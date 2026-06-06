@@ -1,6 +1,6 @@
-import type { AiModel, Platform } from "@prisma/client";
+import type { AiImageModel, AiModel, Platform } from "@prisma/client";
 
-export type { AiModel, Platform, AiProvider } from "@prisma/client";
+export type { AiImageModel, AiModel, Platform, AiProvider } from "@prisma/client";
 
 export interface PlatformOutput {
   platform: Platform;
@@ -8,11 +8,19 @@ export interface PlatformOutput {
   metadata?: Record<string, string | number | boolean>;
 }
 
+export interface VisualOutput {
+  imageUrl: string;
+  promptUsed: string;
+  imageModel: AiImageModel;
+}
+
 export interface GenerationOutputs {
   platforms: PlatformOutput[];
   blendedPrompt: string;
   modelUsed: AiModel;
   generatedAt: string;
+  visualImagePrompt?: string;
+  visuals?: VisualOutput;
 }
 
 export interface GenerationInput {
@@ -22,6 +30,7 @@ export interface GenerationInput {
   videoUrls?: string[];
   platforms: Platform[];
   aiModel?: AiModel;
+  imageModel?: AiImageModel;
 }
 
 export interface ApiKeyStatus {
@@ -34,6 +43,7 @@ export interface SettingsResponse {
   defaultAiModel: AiModel;
   apiKeys: ApiKeyStatus[];
   availableModels: AiModel[];
+  availableImageModels: AiImageModel[];
 }
 
 export interface GenerateResponse {

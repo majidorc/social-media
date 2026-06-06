@@ -15,6 +15,7 @@ export default async function DashboardPage() {
       <ContentGenerator
         defaultModel={defaultModel}
         availableModels={settings.availableModels}
+        availableImageModels={settings.availableImageModels}
       />
     </AppShell>
   );

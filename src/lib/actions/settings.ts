@@ -8,6 +8,7 @@ import { decryptApiKey, encryptApiKey, maskApiKey } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
 import {
+  getAvailableImageModels,
   getAvailableModels,
   resolveDefaultModel,
 } from "@/lib/ai/available-models";
@@ -53,11 +54,13 @@ export async function getSettings(): Promise<SettingsResponse> {
   });
 
   const availableModels = getAvailableModels(apiKeyStatuses);
+  const availableImageModels = getAvailableImageModels(apiKeyStatuses);
 
   return {
     defaultAiModel: settings.defaultAiModel,
     apiKeys: apiKeyStatuses,
     availableModels,
+    availableImageModels,
   };
 }
 

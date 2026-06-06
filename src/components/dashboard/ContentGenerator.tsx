@@ -1,11 +1,12 @@
 "use client";
 
-import type { AiModel, Platform } from "@prisma/client";
+import type { AiImageModel, AiModel, Platform } from "@prisma/client";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { FileDropzone } from "@/components/ui/Card";
+import { ImageModelSelector } from "@/components/dashboard/ImageModelSelector";
 import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
@@ -17,11 +18,13 @@ import { useState } from "react";
 interface ContentGeneratorProps {
   defaultModel: AiModel | null;
   availableModels: AiModel[];
+  availableImageModels: AiImageModel[];
 }
 
 export function ContentGenerator({
   defaultModel,
   availableModels,
+  availableImageModels,
 }: ContentGeneratorProps) {
   const [idea, setIdea] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -31,6 +34,7 @@ export function ContentGenerator({
   const [videoFileName, setVideoFileName] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<Platform[]>(["INSTAGRAM", "TWITTER"]);
   const [modelOverride, setModelOverride] = useState<AiModel | "">("");
+  const [imageModel, setImageModel] = useState<AiImageModel | "">("");
   const [outputs, setOutputs] = useState<GenerationOutputs | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +63,7 @@ export function ContentGenerator({
         videoUrls: videoUrl.trim() ? [videoUrl.trim()] : [],
         platforms,
         aiModel: modelOverride || undefined,
+        imageModel: imageModel || undefined,
       };
 
       const response = await fetch("/api/generate", {
@@ -97,7 +102,7 @@ export function ContentGenerator({
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-zinc-400">
           Every input is optional. Mix and match ideas, media, and links — then
-          generate tailored outputs for each platform you select.
+          generate tailored copy and optional AI graphics in one run.
         </p>
       </header>
 
@@ -176,6 +181,11 @@ export function ContentGenerator({
                 value={modelOverride}
                 onChange={setModelOverride}
               />
+              <ImageModelSelector
+                availableImageModels={availableImageModels}
+                value={imageModel}
+                onChange={setImageModel}
+              />
               <Button
                 type="button"
                 size="lg"
@@ -184,7 +194,13 @@ export function ContentGenerator({
                 disabled={isLoading || !canGenerate}
               >
                 <Sparkles className="h-4 w-4" />
-                {isLoading ? "Generating..." : "Generate content"}
+                {isLoading
+                  ? imageModel
+                    ? "Generating copy & image..."
+                    : "Generating..."
+                  : imageModel
+                    ? "Generate content & image"
+                    : "Generate content"}
               </Button>
             </div>
           </Card>

@@ -28,7 +28,7 @@ export function ModelOverride({
 
   return (
     <Select
-      label="Model override (optional)"
+      label="Text model override (optional)"
       hint={
         defaultModel
           ? `Leave as default to use ${defaultLabel} from Settings.`
