@@ -3,7 +3,7 @@
 import { APP_NAME } from "@/lib/constants";
 import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   Configuration:
@@ -15,7 +15,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
     "Google approved sign-in, but the app could not create your session. This is usually a database or adapter issue on the server.",
   OAuthCreateAccount: "Could not create your account. Try again or contact support.",
   google:
-    "Google approved sign-in, but the app could not save your session. If this persists, set NEXTAUTH_DEBUG=true in Coolify and check server logs after one sign-in attempt.",
+    "Google approved sign-in, but the app could not save your session. Clear site cookies for this domain, then try again. If it persists, verify NEXTAUTH_SECRET in Coolify.",
   OAuthAccountNotLinked:
     "This Google account could not be linked to an existing user. Try another Google account or contact support.",
   Default: "Something went wrong during sign-in. Try again.",
@@ -109,6 +109,17 @@ interface LoginCardProps {
 export function LoginCard({ authConfigured }: LoginCardProps) {
   const searchParams = useSearchParams();
   const authError = getAuthErrorMessage(searchParams.get("error"));
+
+  useEffect(() => {
+    if (!searchParams.get("error")) {
+      return;
+    }
+
+    void fetch("/api/auth/signout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  }, [searchParams]);
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl shadow-violet-950/20">

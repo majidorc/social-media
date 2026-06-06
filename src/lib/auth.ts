@@ -1,6 +1,10 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import {
+  sessionTokenCookieName,
+  useSecureCookies,
+} from "@/lib/auth-cookies";
 import { prisma } from "@/lib/prisma";
 
 function normalizeAppUrl(url: string | undefined): string {
@@ -13,6 +17,18 @@ if (process.env.NEXTAUTH_URL) {
 }
 
 export const appUrl = normalizeAppUrl(process.env.NEXTAUTH_URL);
+
+const nextAuthSecret = process.env.NEXTAUTH_SECRET?.trim() ?? "";
+
+if (!nextAuthSecret) {
+  console.error(
+    "[auth] NEXTAUTH_SECRET is missing. Sessions cannot be encrypted.",
+  );
+} else if (nextAuthSecret.length < 32) {
+  console.warn(
+    "[auth] NEXTAUTH_SECRET should be at least 32 characters. Generate one with: openssl rand -base64 32",
+  );
+}
 
 async function ensureUserSettings(userId: string) {
   try {
@@ -43,6 +59,17 @@ export const authOptions: NextAuthOptions = {
     // JWT avoids fragile database Session writes during OAuth callback.
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
+  },
+  cookies: {
+    sessionToken: {
+      name: sessionTokenCookieName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+      },
+    },
   },
   debug: process.env.NEXTAUTH_DEBUG === "true",
   logger: {
@@ -108,5 +135,5 @@ export const authOptions: NextAuthOptions = {
       }
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: nextAuthSecret || undefined,
 };
