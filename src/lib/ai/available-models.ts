@@ -1,12 +1,18 @@
-import type { AiImageModel, AiModel, AiProvider } from "@prisma/client";
+import type { AiProvider } from "@prisma/client";
 import {
-  AI_IMAGE_MODEL_CONFIG,
-  AI_IMAGE_MODEL_VALUES,
-  AI_MODEL_CONFIG,
-  AI_MODEL_VALUES,
+  fetchLiveModelCatalogForUser,
+  getProviderKeysForUser,
+  invalidateModelCatalogCache,
+  modelBelongsToConfiguredProvider,
+} from "@/lib/ai/list-models";
+import type { LiveModelCatalog, LiveModelOption } from "@/lib/ai/model-types";
+import {
+  findModelOption,
+  normalizeModelId,
 } from "@/lib/ai/models";
-import { AI_IMAGE_MODEL_OPTIONS, AI_MODEL_OPTIONS } from "@/lib/constants";
 import type { ApiKeyStatus } from "@/types";
+
+export { invalidateModelCatalogCache };
 
 export function getConfiguredProviders(
   apiKeys: ApiKeyStatus[],
@@ -14,63 +20,103 @@ export function getConfiguredProviders(
   return apiKeys.filter((item) => item.configured).map((item) => item.provider);
 }
 
-export function getAvailableModels(apiKeys: ApiKeyStatus[]): AiModel[] {
-  const configured = new Set(getConfiguredProviders(apiKeys));
-
-  return AI_MODEL_VALUES.filter((model) =>
-    configured.has(AI_MODEL_CONFIG[model].apiProvider),
-  );
-}
-
-export function getAvailableImageModels(
+export async function getLiveModelCatalog(
+  userId: string,
   apiKeys: ApiKeyStatus[],
-): AiImageModel[] {
-  const configured = new Set(getConfiguredProviders(apiKeys));
+  options: { refresh?: boolean } = {},
+): Promise<LiveModelCatalog> {
+  const providerKeys = await getProviderKeysForUser(userId);
+  const catalog = await fetchLiveModelCatalogForUser(userId, providerKeys, options);
 
-  return AI_IMAGE_MODEL_VALUES.filter((model) =>
-    configured.has(AI_IMAGE_MODEL_CONFIG[model].apiProvider),
-  );
+  return {
+    ...catalog,
+    fetchedAt: new Date().toISOString(),
+  };
 }
 
-export function getAvailableModelOptions(apiKeys: ApiKeyStatus[]) {
-  const available = new Set(getAvailableModels(apiKeys));
-
-  return AI_MODEL_OPTIONS.filter((option) => available.has(option.value));
+export async function getAvailableModels(
+  userId: string,
+  apiKeys: ApiKeyStatus[],
+  options?: { refresh?: boolean },
+): Promise<LiveModelOption[]> {
+  const catalog = await getLiveModelCatalog(userId, apiKeys, options);
+  return catalog.textModels;
 }
 
-export function getAvailableImageModelOptions(apiKeys: ApiKeyStatus[]) {
-  const available = new Set(getAvailableImageModels(apiKeys));
+export async function getAvailableImageModels(
+  userId: string,
+  apiKeys: ApiKeyStatus[],
+  options?: { refresh?: boolean },
+): Promise<LiveModelOption[]> {
+  const catalog = await getLiveModelCatalog(userId, apiKeys, options);
+  return catalog.imageModels;
+}
 
-  return AI_IMAGE_MODEL_OPTIONS.filter((option) => available.has(option.value));
+export async function getAvailableModelOptions(
+  userId: string,
+  apiKeys: ApiKeyStatus[],
+  options?: { refresh?: boolean },
+): Promise<LiveModelOption[]> {
+  return getAvailableModels(userId, apiKeys, options);
+}
+
+export async function getAvailableImageModelOptions(
+  userId: string,
+  apiKeys: ApiKeyStatus[],
+  options?: { refresh?: boolean },
+): Promise<LiveModelOption[]> {
+  return getAvailableImageModels(userId, apiKeys, options);
 }
 
 export function resolveDefaultModel(
-  storedModel: AiModel,
-  apiKeys: ApiKeyStatus[],
-): AiModel | null {
-  const available = getAvailableModels(apiKeys);
-
-  if (available.length === 0) {
+  storedModel: string,
+  availableModels: LiveModelOption[],
+): string | null {
+  if (availableModels.length === 0) {
     return null;
   }
 
-  if (available.includes(storedModel)) {
-    return storedModel;
+  const normalizedStored = normalizeModelId(storedModel);
+
+  const match = availableModels.find(
+    (model) => normalizeModelId(model.value) === normalizedStored,
+  );
+
+  if (match) {
+    return match.value;
   }
 
-  return available[0];
+  return availableModels[0]?.value ?? null;
 }
 
-export function isModelAvailable(
-  model: AiModel,
+export async function isModelAvailable(
+  userId: string,
+  modelId: string,
   apiKeys: ApiKeyStatus[],
-): boolean {
-  return getAvailableModels(apiKeys).includes(model);
+  options?: { refresh?: boolean },
+): Promise<boolean> {
+  const configured = getConfiguredProviders(apiKeys);
+
+  if (!modelBelongsToConfiguredProvider(modelId, configured)) {
+    return false;
+  }
+
+  const catalog = await getLiveModelCatalog(userId, apiKeys, options);
+  return Boolean(findModelOption(catalog.textModels, modelId));
 }
 
-export function isImageModelAvailable(
-  model: AiImageModel,
+export async function isImageModelAvailable(
+  userId: string,
+  modelId: string,
   apiKeys: ApiKeyStatus[],
-): boolean {
-  return getAvailableImageModels(apiKeys).includes(model);
+  options?: { refresh?: boolean },
+): Promise<boolean> {
+  const configured = getConfiguredProviders(apiKeys);
+
+  if (!modelBelongsToConfiguredProvider(modelId, configured)) {
+    return false;
+  }
+
+  const catalog = await getLiveModelCatalog(userId, apiKeys, options);
+  return Boolean(findModelOption(catalog.imageModels, modelId));
 }

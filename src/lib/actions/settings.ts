@@ -1,17 +1,17 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { AiModel, AiProvider } from "@prisma/client";
+import type { AiProvider } from "@prisma/client";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { decryptApiKey, encryptApiKey, maskApiKey } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
 import {
-  getAvailableImageModels,
-  getAvailableModels,
+  getLiveModelCatalog,
+  invalidateModelCatalogCache,
   resolveDefaultModel,
 } from "@/lib/ai/available-models";
-import { aiModelSchema, getModelConfig } from "@/lib/ai/models";
+import { findModelOption, textModelSchema } from "@/lib/ai/models";
 import type { ApiKeyStatus, SettingsResponse } from "@/types";
 
 const saveApiKeysSchema = z.object({
@@ -21,7 +21,7 @@ const saveApiKeysSchema = z.object({
 });
 
 const saveDefaultModelSchema = z.object({
-  defaultAiModel: aiModelSchema,
+  defaultAiModel: textModelSchema,
 });
 
 export async function getSettings(): Promise<SettingsResponse> {
@@ -52,14 +52,9 @@ export async function getSettings(): Promise<SettingsResponse> {
     };
   });
 
-  const availableModels = getAvailableModels(apiKeyStatuses);
-  const availableImageModels = getAvailableImageModels(apiKeyStatuses);
-
   return {
     defaultAiModel: settings.defaultAiModel,
     apiKeys: apiKeyStatuses,
-    availableModels,
-    availableImageModels,
   };
 }
 
@@ -104,12 +99,14 @@ export async function saveApiKeys(
     });
   }
 
+  invalidateModelCatalogCache(user.id);
   revalidatePath("/settings");
+  revalidatePath("/dashboard");
   return { success: true, message: "API keys saved securely." };
 }
 
 export async function saveDefaultModel(
-  defaultAiModel: AiModel,
+  defaultAiModel: string,
 ): Promise<{ success: boolean; message: string }> {
   const parsed = saveDefaultModelSchema.safeParse({ defaultAiModel });
 
@@ -117,33 +114,36 @@ export async function saveDefaultModel(
     return { success: false, message: "Invalid model selection." };
   }
 
+  const user = await requireCurrentUser();
   const settings = await getSettings();
+  const catalog = await getLiveModelCatalog(user.id, settings.apiKeys, {
+    refresh: true,
+  });
 
-  if (settings.availableModels.length === 0) {
+  if (catalog.textModels.length === 0) {
     return {
       success: false,
       message: "Add at least one API key before choosing a default model.",
     };
   }
 
-  if (!settings.availableModels.includes(parsed.data.defaultAiModel)) {
-    const provider = getModelConfig(parsed.data.defaultAiModel).provider;
+  const selected = findModelOption(catalog.textModels, parsed.data.defaultAiModel);
+
+  if (!selected) {
     return {
       success: false,
-      message: `Configure your ${provider} API key before selecting this model.`,
+      message: "That model is not available for your configured API keys.",
     };
   }
-
-  const user = await requireCurrentUser();
 
   await prisma.userSettings.upsert({
     where: { userId: user.id },
     create: {
       userId: user.id,
-      defaultAiModel: parsed.data.defaultAiModel,
+      defaultAiModel: selected.value,
     },
     update: {
-      defaultAiModel: parsed.data.defaultAiModel,
+      defaultAiModel: selected.value,
     },
   });
 
@@ -152,7 +152,10 @@ export async function saveDefaultModel(
   return { success: true, message: "Default model updated." };
 }
 
-export async function getDefaultModel(): Promise<AiModel | null> {
+export async function getDefaultModel(): Promise<string | null> {
+  const user = await requireCurrentUser();
   const settings = await getSettings();
-  return resolveDefaultModel(settings.defaultAiModel, settings.apiKeys);
+  const catalog = await getLiveModelCatalog(user.id, settings.apiKeys);
+
+  return resolveDefaultModel(settings.defaultAiModel, catalog.textModels);
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSettings, saveApiKeys, saveDefaultModel } from "@/lib/actions/settings";
-import { aiModelSchema } from "@/lib/ai/models";
+import { textModelSchema } from "@/lib/ai/models";
 
 const saveKeysSchema = z.object({
   openai: z.string().optional(),
@@ -10,7 +10,7 @@ const saveKeysSchema = z.object({
 });
 
 const saveModelSchema = z.object({
-  defaultAiModel: aiModelSchema,
+  defaultAiModel: textModelSchema,
 });
 
 export async function GET() {

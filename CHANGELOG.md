@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Live model catalog synced from provider APIs (`GET /api/models`) with 5-minute per-user cache
+- Google `listModels()` integration separating Gemini text (`generateContent`) and Imagen image (`predict` / `generateImages`) models
+- OpenAI and Anthropic live model discovery for text and image endpoints
+- `useLiveModels` hook with loading states for dashboard and settings selectors
+
+### Changed
+
+- Model IDs stored as provider-native strings instead of Prisma enums (fixes Imagen 404s from stale hardcoded IDs)
+- Text and image model dropdowns load asynchronously from live provider lists
+- Saving API keys invalidates the model cache and refreshes available options
+
 ## [0.1.0] - 2026-06-06
 
 ### Added

@@ -2,13 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ContentGenerator } from "@/components/dashboard/ContentGenerator";
-import { getDefaultModel, getSettings } from "@/lib/actions/settings";
+import { getDefaultModel } from "@/lib/actions/settings";
 import { getCurrentUser } from "@/lib/get-current-user";
 
 export default async function DashboardPage() {
-  const [defaultModel, settings, user] = await Promise.all([
+  const [defaultModel, user] = await Promise.all([
     getDefaultModel(),
-    getSettings(),
     getCurrentUser(),
   ]);
 
@@ -20,11 +19,7 @@ export default async function DashboardPage() {
           : null
       }
     >
-      <ContentGenerator
-        defaultModel={defaultModel}
-        availableModels={settings.availableModels}
-        availableImageModels={settings.availableImageModels}
-      />
+      <ContentGenerator defaultModel={defaultModel} />
     </AppShell>
   );
 }

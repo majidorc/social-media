@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { AI_IMAGE_MODEL_OPTIONS, PLATFORM_OPTIONS } from "@/lib/constants";
+import { PLATFORM_OPTIONS } from "@/lib/constants";
 import type { GenerationOutputs } from "@/types";
 import { Copy, ImageIcon, Loader2, Sparkles } from "lucide-react";
 import Image from "next/image";
@@ -30,11 +30,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
     setTimeout(() => setCopiedPrompt(false), 2000);
   };
 
-  const imageModelLabel = outputs?.visuals
-    ? (AI_IMAGE_MODEL_OPTIONS.find(
-        (option) => option.value === outputs.visuals?.imageModel,
-      )?.label ?? outputs.visuals.imageModel)
-    : null;
+  const imageModelLabel = outputs?.visuals?.imageModel ?? null;
 
   return (
     <Card

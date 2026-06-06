@@ -1,8 +1,8 @@
 "use client";
 
-import type { AiModel } from "@prisma/client";
-import { getAvailableModelOptions } from "@/lib/ai/available-models";
+import { formatModelLabel } from "@/lib/ai/models";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
+import { useLiveModels } from "@/hooks/useLiveModels";
 import type { SettingsResponse } from "@/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -11,25 +11,33 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { KeyRound, Save, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 interface SettingsFormProps {
   initialSettings: SettingsResponse;
 }
 
-function pickDefaultModel(settings: SettingsResponse): AiModel {
-  if (settings.availableModels.includes(settings.defaultAiModel)) {
+function pickDefaultModel(
+  settings: SettingsResponse,
+  availableValues: string[],
+): string {
+  if (availableValues.includes(settings.defaultAiModel)) {
     return settings.defaultAiModel;
   }
 
-  return settings.availableModels[0] ?? settings.defaultAiModel;
+  return availableValues[0] ?? settings.defaultAiModel;
 }
 
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const router = useRouter();
-  const [defaultModel, setDefaultModel] = useState<AiModel>(() =>
-    pickDefaultModel(initialSettings),
-  );
+  const {
+    textModels,
+    isLoading: modelsLoading,
+    error: modelsError,
+    refresh: refreshModels,
+  } = useLiveModels();
+
+  const [defaultModel, setDefaultModel] = useState(initialSettings.defaultAiModel);
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
   const [googleKey, setGoogleKey] = useState("");
@@ -41,16 +49,13 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     initialSettings.apiKeys.map((item) => [item.provider, item]),
   );
 
-  const modelOptions = useMemo(
-    () => getAvailableModelOptions(initialSettings.apiKeys),
-    [initialSettings.apiKeys],
-  );
-
-  const hasConfiguredKeys = modelOptions.length > 0;
+  const hasConfiguredKeys = initialSettings.apiKeys.some((item) => item.configured);
+  const hasLiveModels = textModels.length > 0;
 
   useEffect(() => {
-    setDefaultModel(pickDefaultModel(initialSettings));
-  }, [initialSettings]);
+    const values = textModels.map((model) => model.value);
+    setDefaultModel(pickDefaultModel(initialSettings, values));
+  }, [initialSettings, textModels]);
 
   const handleSaveKeys = () => {
     startTransition(async () => {
@@ -83,6 +88,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         setOpenaiKey("");
         setAnthropicKey("");
         setGoogleKey("");
+        await refreshModels();
         router.refresh();
       } catch {
         setError("Failed to save API keys.");
@@ -129,8 +135,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           API keys & model preferences
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-zinc-400">
-          Add your provider API keys first, then choose a default model from the
-          providers you have configured.
+          Add your provider API keys first. Available models are synced live from
+          each provider&apos;s API when you open this page or save keys.
         </p>
       </header>
 
@@ -153,9 +159,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-200/80">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            Keys are encrypted before storage. Generation calls provider APIs
-            directly (OpenAI, Anthropic, Google) using the model ID mapped in{" "}
-            <code className="text-emerald-300">src/lib/ai/models.ts</code>.
+            Keys are encrypted before storage. Model lists are fetched live from
+            OpenAI, Anthropic, and Google using your saved credentials.
           </p>
         </div>
 
@@ -216,9 +221,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       <Card
         title="Default AI model"
         description={
-          hasConfiguredKeys
-            ? "Only models from providers with a saved API key are shown here."
-            : "Save at least one API key above to unlock model selection."
+          modelsLoading
+            ? "Syncing available models from your providers..."
+            : hasLiveModels
+              ? "Only models returned live from your configured providers are shown."
+              : "Save at least one API key above to unlock model selection."
         }
       >
         {hasConfiguredKeys ? (
@@ -227,20 +234,24 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               <Select
                 label="Preferred model"
                 value={defaultModel}
-                onChange={(event) =>
-                  setDefaultModel(event.target.value as AiModel)
+                onChange={(event) => setDefaultModel(event.target.value)}
+                disabled={modelsLoading || !hasLiveModels}
+                hint={modelsError ?? undefined}
+                options={
+                  modelsLoading
+                    ? [{ value: defaultModel, label: "Loading models..." }]
+                    : textModels.map((option) => ({
+                        value: option.value,
+                        label: formatModelLabel(option),
+                      }))
                 }
-                options={modelOptions.map((option) => ({
-                  value: option.value,
-                  label: `${option.label} · ${option.provider}`,
-                }))}
               />
             </div>
             <Button
               type="button"
               variant="secondary"
               onClick={handleSaveModel}
-              disabled={isPending}
+              disabled={isPending || modelsLoading || !hasLiveModels}
             >
               <Save className="h-4 w-4" />
               Save model
@@ -249,7 +260,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         ) : (
           <p className="text-sm text-zinc-500">
             Configure OpenAI, Google Gemini, or Anthropic above — then pick your
-            default model from the matching options.
+            default model from the live synced list.
           </p>
         )}
       </Card>

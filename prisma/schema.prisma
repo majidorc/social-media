@@ -13,20 +13,6 @@ enum AiProvider {
   GOOGLE
 }
 
-enum AiModel {
-  GPT_4O
-  GPT_4O_MINI
-  CLAUDE_35_SONNET
-  GEMINI_25_PRO
-  GEMINI_25_FLASH
-}
-
-enum AiImageModel {
-  IMAGEN_3_PRO
-  IMAGEN_3_FAST
-  DALL_E_3
-}
-
 enum Platform {
   INSTAGRAM
   TWITTER
@@ -91,7 +77,7 @@ model UserSettings {
   id             String   @id @default(cuid())
   userId         String   @unique
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultAiModel AiModel  @default(GPT_4O)
+  defaultAiModel String   @default("gpt-4o")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -112,23 +98,21 @@ model ApiKey {
 /// {
 ///   platforms: PlatformOutput[],
 ///   blendedPrompt: string,
-///   modelUsed: AiModel,
-///   generatedAt: string,
-///   visualImagePrompt?: string,
-///   visuals?: { imageUrl: string, promptUsed: string, imageModel: AiImageModel }
+///   modelUsed: string (provider-native model id),
+///   visuals?: { imageUrl: string, promptUsed: string, imageModel: string }
 /// }
 model ContentWorkspace {
-  id         String        @id @default(cuid())
+  id         String     @id @default(cuid())
   userId     String
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  idea       String?       @db.Text
-  imageUrls  String[]      @default([])
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea       String?    @db.Text
+  imageUrls  String[]   @default([])
   linkUrl    String?
-  videoUrls  String[]      @default([])
+  videoUrls  String[]   @default([])
   platforms  Platform[]
-  aiModel    AiModel
-  imageModel AiImageModel?
-  outputs    Json          @default("{}")
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  aiModel    String
+  imageModel String?
+  outputs    Json       @default("{}")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }

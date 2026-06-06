@@ -1,113 +1,71 @@
-import type { AiImageModel, AiModel, AiProvider } from "@prisma/client";
+import type { AiProvider } from "@prisma/client";
 import { z } from "zod";
+import type { LiveModelOption } from "@/lib/ai/model-types";
 
-export type ModelKind = "text" | "image";
-
-interface BaseModelConfig {
-  label: string;
-  provider: "OpenAI" | "Anthropic" | "Google";
-  apiProvider: AiProvider;
-  apiModelId: string;
-  kind: ModelKind;
+export function normalizeModelId(modelId: string): string {
+  return modelId.replace(/^models\//, "").trim();
 }
 
-export const AI_MODEL_CONFIG: Record<AiModel, BaseModelConfig & { kind: "text" }> =
-  {
-    GPT_4O: {
-      label: "GPT-4o",
-      provider: "OpenAI",
-      apiProvider: "OPENAI",
-      apiModelId: "gpt-4o",
-      kind: "text",
-    },
-    GPT_4O_MINI: {
-      label: "GPT-4o Mini",
-      provider: "OpenAI",
-      apiProvider: "OPENAI",
-      apiModelId: "gpt-4o-mini",
-      kind: "text",
-    },
-    CLAUDE_35_SONNET: {
-      label: "Claude Sonnet 4",
-      provider: "Anthropic",
-      apiProvider: "ANTHROPIC",
-      apiModelId: "claude-sonnet-4-20250514",
-      kind: "text",
-    },
-    GEMINI_25_PRO: {
-      label: "Gemini 2.5 Pro",
-      provider: "Google",
-      apiProvider: "GOOGLE",
-      apiModelId: "gemini-2.5-pro",
-      kind: "text",
-    },
-    GEMINI_25_FLASH: {
-      label: "Gemini 2.5 Flash",
-      provider: "Google",
-      apiProvider: "GOOGLE",
-      apiModelId: "gemini-2.5-flash",
-      kind: "text",
-    },
-  };
+export function resolveModelProvider(modelId: string): AiProvider {
+  const id = normalizeModelId(modelId).toLowerCase();
 
-export const AI_IMAGE_MODEL_CONFIG: Record<
-  AiImageModel,
-  BaseModelConfig & { kind: "image" }
-> = {
-  IMAGEN_3_PRO: {
-    label: "Imagen 3 Pro",
-    provider: "Google",
-    apiProvider: "GOOGLE",
-    apiModelId: "imagen-3.0-generate-002",
-    kind: "image",
-  },
-  IMAGEN_3_FAST: {
-    label: "Imagen 3 Fast",
-    provider: "Google",
-    apiProvider: "GOOGLE",
-    apiModelId: "imagen-3.0-fast-generate-001",
-    kind: "image",
-  },
-  DALL_E_3: {
-    label: "DALL-E 3",
-    provider: "OpenAI",
-    apiProvider: "OPENAI",
-    apiModelId: "dall-e-3",
-    kind: "image",
-  },
-};
+  if (
+    id.startsWith("gpt-") ||
+    id.startsWith("dall-e") ||
+    id.startsWith("o1") ||
+    id.startsWith("o3") ||
+    id.startsWith("o4") ||
+    id.includes("gpt-image")
+  ) {
+    return "OPENAI";
+  }
 
-export const AI_MODEL_VALUES = Object.keys(AI_MODEL_CONFIG) as AiModel[];
-export const AI_IMAGE_MODEL_VALUES = Object.keys(
-  AI_IMAGE_MODEL_CONFIG,
-) as AiImageModel[];
+  if (id.startsWith("claude")) {
+    return "ANTHROPIC";
+  }
 
-export const aiModelSchema = z.enum([
-  "GPT_4O",
-  "GPT_4O_MINI",
-  "CLAUDE_35_SONNET",
-  "GEMINI_25_PRO",
-  "GEMINI_25_FLASH",
-]);
-
-export const aiImageModelSchema = z.enum([
-  "IMAGEN_3_PRO",
-  "IMAGEN_3_FAST",
-  "DALL_E_3",
-]);
-
-export function getModelConfig(model: AiModel) {
-  return AI_MODEL_CONFIG[model];
+  return "GOOGLE";
 }
 
-export function getImageModelConfig(model: AiImageModel) {
-  return AI_IMAGE_MODEL_CONFIG[model];
+export function providerDisplayName(
+  provider: AiProvider,
+): LiveModelOption["provider"] {
+  switch (provider) {
+    case "OPENAI":
+      return "OpenAI";
+    case "ANTHROPIC":
+      return "Anthropic";
+    case "GOOGLE":
+      return "Google";
+  }
 }
 
-export function isTextModel(model: AiModel): boolean {
-  return AI_MODEL_CONFIG[model].kind === "text";
+export function isImageModelId(modelId: string): boolean {
+  const id = normalizeModelId(modelId).toLowerCase();
+  return (
+    id.includes("imagen") ||
+    id.startsWith("dall-e") ||
+    id.includes("gpt-image")
+  );
 }
 
-export function isImageModel(model: AiImageModel): boolean {
-  return AI_IMAGE_MODEL_CONFIG[model].kind === "image";
+export const modelIdSchema = z
+  .string()
+  .trim()
+  .min(1, "Model id is required")
+  .max(128);
+
+export const textModelSchema = modelIdSchema;
+export const imageModelSchema = modelIdSchema;
+
+export function findModelOption(
+  catalog: LiveModelOption[],
+  modelId: string,
+): LiveModelOption | undefined {
+  const normalized = normalizeModelId(modelId);
+  return catalog.find((item) => normalizeModelId(item.value) === normalized);
+}
+
+export function formatModelLabel(option: LiveModelOption): string {
+  return `${option.label} · ${option.provider}`;
 }

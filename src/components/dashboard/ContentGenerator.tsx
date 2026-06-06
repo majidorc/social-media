@@ -1,6 +1,6 @@
 "use client";
 
-import type { AiImageModel, AiModel, Platform } from "@prisma/client";
+import type { Platform } from "@prisma/client";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -10,22 +10,24 @@ import { ImageModelSelector } from "@/components/dashboard/ImageModelSelector";
 import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
+import { useLiveModels } from "@/hooks/useLiveModels";
 import type { GenerateResponse, GenerationOutputs } from "@/types";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 
 interface ContentGeneratorProps {
-  defaultModel: AiModel | null;
-  availableModels: AiModel[];
-  availableImageModels: AiImageModel[];
+  defaultModel: string | null;
 }
 
-export function ContentGenerator({
-  defaultModel,
-  availableModels,
-  availableImageModels,
-}: ContentGeneratorProps) {
+export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
+  const {
+    textModels,
+    imageModels,
+    isLoading: modelsLoading,
+    error: modelsError,
+  } = useLiveModels();
+
   const [idea, setIdea] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
@@ -33,13 +35,14 @@ export function ContentGenerator({
   const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [videoFileName, setVideoFileName] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<Platform[]>(["INSTAGRAM", "TWITTER"]);
-  const [modelOverride, setModelOverride] = useState<AiModel | "">("");
-  const [imageModel, setImageModel] = useState<AiImageModel | "">("");
+  const [modelOverride, setModelOverride] = useState("");
+  const [imageModel, setImageModel] = useState("");
   const [outputs, setOutputs] = useState<GenerationOutputs | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canGenerate = defaultModel !== null || modelOverride !== "";
+  const canGenerate =
+    !modelsLoading && (defaultModel !== null || modelOverride !== "");
 
   const handleGenerate = async () => {
     if (platforms.length === 0) {
@@ -106,7 +109,7 @@ export function ContentGenerator({
         </p>
       </header>
 
-      {!defaultModel && (
+      {!modelsLoading && !defaultModel && textModels.length === 0 && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           No AI provider is configured yet.{" "}
           <Link href="/settings" className="font-medium underline underline-offset-2">
@@ -177,12 +180,16 @@ export function ContentGenerator({
             <div className="space-y-4">
               <ModelOverride
                 defaultModel={defaultModel}
-                availableModels={availableModels}
+                textModels={textModels}
+                isLoading={modelsLoading}
+                loadError={modelsError}
                 value={modelOverride}
                 onChange={setModelOverride}
               />
               <ImageModelSelector
-                availableImageModels={availableImageModels}
+                imageModels={imageModels}
+                isLoading={modelsLoading}
+                loadError={modelsError}
                 value={imageModel}
                 onChange={setImageModel}
               />

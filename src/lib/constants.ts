@@ -1,24 +1,6 @@
 import type { Platform } from "@prisma/client";
-import {
-  AI_IMAGE_MODEL_CONFIG,
-  AI_IMAGE_MODEL_VALUES,
-  AI_MODEL_CONFIG,
-  AI_MODEL_VALUES,
-} from "@/lib/ai/models";
 
 export const APP_NAME = "AI Content Hub";
-
-export const AI_MODEL_OPTIONS = AI_MODEL_VALUES.map((value) => ({
-  value,
-  label: AI_MODEL_CONFIG[value].label,
-  provider: AI_MODEL_CONFIG[value].provider,
-}));
-
-export const AI_IMAGE_MODEL_OPTIONS = AI_IMAGE_MODEL_VALUES.map((value) => ({
-  value,
-  label: AI_IMAGE_MODEL_CONFIG[value].label,
-  provider: AI_IMAGE_MODEL_CONFIG[value].provider,
-}));
 
 export const PLATFORM_OPTIONS: {
   value: Platform;
@@ -64,18 +46,18 @@ export const API_KEY_PROVIDERS = [
     provider: "OPENAI" as const,
     label: "OpenAI",
     placeholder: "sk-...",
-    description: "Used for GPT-4o, GPT-4o Mini, and DALL-E 3 image generation.",
+    description: "Used for GPT and DALL-E models (discovered live from your account).",
   },
   {
     provider: "GOOGLE" as const,
     label: "Google Gemini",
     placeholder: "AIza...",
-    description: "Used for Gemini 2.5 text models and Imagen 3 image generation.",
+    description: "Used for Gemini text and Imagen image models (synced via listModels).",
   },
   {
     provider: "ANTHROPIC" as const,
     label: "Anthropic",
     placeholder: "sk-ant-...",
-    description: "Used for Claude Sonnet generations.",
+    description: "Used for Claude models (discovered live from your account).",
   },
 ];

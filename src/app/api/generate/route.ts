@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import type { AiImageModel, AiModel, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import {
   isImageModelAvailable,
   isModelAvailable,
@@ -9,7 +9,7 @@ import {
   generateContentWithVisuals,
   MissingApiKeyError,
 } from "@/lib/ai/generate-content";
-import { aiImageModelSchema, aiModelSchema } from "@/lib/ai/models";
+import { imageModelSchema, textModelSchema } from "@/lib/ai/models";
 import { getDefaultModel, getSettings } from "@/lib/actions/settings";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { prisma } from "@/lib/prisma";
@@ -40,8 +40,8 @@ const generateSchema = z.object({
       ]),
     )
     .min(1, "Select at least one platform"),
-  aiModel: aiModelSchema.optional(),
-  imageModel: aiImageModelSchema.optional(),
+  aiModel: textModelSchema.optional(),
+  imageModel: imageModelSchema.optional(),
 });
 
 export async function POST(request: Request) {
@@ -62,14 +62,21 @@ export async function POST(request: Request) {
       getDefaultModel(),
     ]);
 
-    let textModel: AiModel | null = resolvedDefault;
+    let textModel: string | null = resolvedDefault;
 
     if (parsed.data.aiModel) {
-      if (!isModelAvailable(parsed.data.aiModel, settings.apiKeys)) {
+      const available = await isModelAvailable(
+        user.id,
+        parsed.data.aiModel,
+        settings.apiKeys,
+        { refresh: true },
+      );
+
+      if (!available) {
         return NextResponse.json(
           {
             error:
-              "That text model requires an API key you have not configured yet. Update Settings or pick another model.",
+              "That text model is not available for your configured API keys.",
           },
           { status: 400 },
         );
@@ -85,16 +92,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const imageModel: AiImageModel | undefined = parsed.data.imageModel;
+    const imageModel = parsed.data.imageModel;
 
-    if (imageModel && !isImageModelAvailable(imageModel, settings.apiKeys)) {
-      return NextResponse.json(
-        {
-          error:
-            "That image model requires an API key you have not configured yet. Update Settings or pick another model.",
-        },
-        { status: 400 },
+    if (imageModel) {
+      const imageAvailable = await isImageModelAvailable(
+        user.id,
+        imageModel,
+        settings.apiKeys,
+        { refresh: true },
       );
+
+      if (!imageAvailable) {
+        return NextResponse.json(
+          {
+            error:
+              "That image model is not available for your configured API keys.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const linkUrl = parsed.data.linkUrl?.trim() || undefined;

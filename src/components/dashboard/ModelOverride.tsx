@@ -1,51 +1,62 @@
 "use client";
 
-import type { AiModel } from "@prisma/client";
 import { Select } from "@/components/ui/Select";
-import { AI_MODEL_OPTIONS } from "@/lib/constants";
+import { formatModelLabel } from "@/lib/ai/models";
+import type { LiveModelOption } from "@/types";
 
 interface ModelOverrideProps {
-  defaultModel: AiModel | null;
-  availableModels: AiModel[];
-  value: AiModel | "";
-  onChange: (value: AiModel | "") => void;
+  defaultModel: string | null;
+  textModels: LiveModelOption[];
+  isLoading: boolean;
+  loadError: string | null;
+  value: string;
+  onChange: (value: string) => void;
 }
 
 export function ModelOverride({
   defaultModel,
-  availableModels,
+  textModels,
+  isLoading,
+  loadError,
   value,
   onChange,
 }: ModelOverrideProps) {
-  const availableOptions = AI_MODEL_OPTIONS.filter((option) =>
-    availableModels.includes(option.value),
-  );
+  const defaultOption = defaultModel
+    ? textModels.find((option) => option.value === defaultModel)
+    : null;
 
-  const defaultLabel = defaultModel
-    ? (AI_MODEL_OPTIONS.find((option) => option.value === defaultModel)?.label ??
-      defaultModel)
-    : "none configured";
+  const defaultLabel = defaultOption
+    ? defaultOption.label
+    : defaultModel ?? "none configured";
+
+  const disabled = isLoading || textModels.length === 0;
 
   return (
     <Select
       label="Text model override (optional)"
       hint={
-        defaultModel
-          ? `Leave as default to use ${defaultLabel} from Settings.`
-          : "Add an API key in Settings to enable generation."
+        loadError
+          ? loadError
+          : isLoading
+            ? "Loading models from your configured providers..."
+            : defaultModel
+              ? `Leave as default to use ${defaultLabel} from Settings.`
+              : "Add an API key in Settings to enable generation."
       }
       value={value}
-      onChange={(event) =>
-        onChange((event.target.value as AiModel | "") || "")
+      onChange={(event) => onChange(event.target.value)}
+      disabled={disabled}
+      options={
+        isLoading
+          ? [{ value: "", label: "Loading models..." }]
+          : [
+              { value: "", label: `Use default (${defaultLabel})` },
+              ...textModels.map((option) => ({
+                value: option.value,
+                label: formatModelLabel(option),
+              })),
+            ]
       }
-      disabled={availableOptions.length === 0}
-      options={[
-        { value: "", label: `Use default (${defaultLabel})` },
-        ...availableOptions.map((option) => ({
-          value: option.value,
-          label: `${option.label} · ${option.provider}`,
-        })),
-      ]}
     />
   );
 }
