@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ContentGenerator } from "@/components/dashboard/ContentGenerator";
 import { getDefaultModel } from "@/lib/actions/settings";
@@ -19,7 +20,15 @@ export default async function DashboardPage() {
           : null
       }
     >
-      <ContentGenerator defaultModel={defaultModel} />
+      <Suspense
+        fallback={
+          <div className="flex min-h-40 items-center justify-center text-sm text-zinc-400">
+            Loading generator...
+          </div>
+        }
+      >
+        <ContentGenerator defaultModel={defaultModel} />
+      </Suspense>
     </AppShell>
   );
 }

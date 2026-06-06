@@ -11,16 +11,23 @@ import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
 import { useLiveModels } from "@/hooks/useLiveModels";
-import type { GenerateResponse, GenerationOutputs } from "@/types";
+import { notifyGenerationHistoryUpdated } from "@/lib/generation-history-events";
+import type { GenerateResponse, GenerationOutputs, WorkspaceDetailResponse } from "@/types";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Sparkles } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ContentGeneratorProps {
   defaultModel: string | null;
 }
 
 export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const workspaceId = searchParams.get("workspace");
+  const loadedWorkspaceRef = useRef<string | null>(null);
+
   const {
     textModels,
     imageModels,
@@ -39,7 +46,76 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
   const [imageModel, setImageModel] = useState("");
   const [outputs, setOutputs] = useState<GenerationOutputs | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const applyWorkspace = useCallback((workspace: WorkspaceDetailResponse["workspace"]) => {
+    setIdea(workspace.idea ?? "");
+    setImageUrl(workspace.imageUrls[0] ?? "");
+    setLinkUrl(workspace.linkUrl ?? "");
+    setVideoUrl(workspace.videoUrls[0] ?? "");
+    setImageFileName(null);
+    setVideoFileName(null);
+    setPlatforms(workspace.platforms);
+    setModelOverride(workspace.aiModel);
+    setImageModel(workspace.imageModel ?? "");
+    setOutputs(workspace.outputs);
+    setError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!workspaceId) {
+      loadedWorkspaceRef.current = null;
+      return;
+    }
+
+    if (loadedWorkspaceRef.current === workspaceId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWorkspace = async () => {
+      setIsLoadingHistory(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/generate/${workspaceId}`, {
+          credentials: "same-origin",
+        });
+        const data = (await response.json()) as WorkspaceDetailResponse & {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to load generation.");
+        }
+
+        if (!cancelled) {
+          applyWorkspace(data.workspace);
+          loadedWorkspaceRef.current = workspaceId;
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Failed to load generation.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingHistory(false);
+        }
+      }
+    };
+
+    void loadWorkspace();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyWorkspace, workspaceId]);
 
   const canGenerate =
     !modelsLoading && (defaultModel !== null || modelOverride !== "");
@@ -85,6 +161,9 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
 
       const result = data as GenerateResponse;
       setOutputs(result.outputs);
+      loadedWorkspaceRef.current = result.workspaceId;
+      router.replace(`/dashboard?workspace=${result.workspaceId}`);
+      notifyGenerationHistoryUpdated();
     } catch (generationError) {
       setError(
         generationError instanceof Error
@@ -108,6 +187,13 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
           generate tailored copy and optional AI graphics in one run.
         </p>
       </header>
+
+      {isLoadingHistory ? (
+        <div className="flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-sm text-violet-200">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading saved generation...
+        </div>
+      ) : null}
 
       {!modelsLoading && !defaultModel && textModels.length === 0 && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
@@ -213,7 +299,11 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
           </Card>
         </div>
 
-        <OutputPanel outputs={outputs} isLoading={isLoading} error={error} />
+        <OutputPanel
+          outputs={outputs}
+          isLoading={isLoading || isLoadingHistory}
+          error={error}
+        />
       </div>
     </div>
   );

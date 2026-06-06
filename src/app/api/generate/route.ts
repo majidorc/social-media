@@ -13,7 +13,8 @@ import { imageModelSchema, textModelSchema } from "@/lib/ai/models";
 import { getDefaultModel, getSettings } from "@/lib/actions/settings";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { prisma } from "@/lib/prisma";
-import type { GenerateResponse } from "@/types";
+import { toWorkspaceHistoryItem } from "@/lib/workspace-history";
+import type { GenerateResponse, GenerationHistoryResponse } from "@/types";
 
 const optionalUrl = z
   .string()
@@ -175,7 +176,7 @@ export async function GET() {
     const history = await prisma.contentWorkspace.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take: 20,
       select: {
         id: true,
         idea: true,
@@ -186,7 +187,11 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ history });
+    const response: GenerationHistoryResponse = {
+      history: history.map(toWorkspaceHistoryItem),
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("[GET /api/generate]", error);
     return NextResponse.json(

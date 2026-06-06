@@ -2,10 +2,12 @@
 
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
+import { HistoryPanel } from "@/components/layout/HistoryPanel";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { LayoutDashboard, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -36,7 +38,39 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
 
       <nav className="flex gap-2 overflow-x-auto px-4 py-4 lg:flex-col lg:gap-1 lg:px-3">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.slice(0, 1).map(({ href, label, icon: Icon }) => {
+          const active = pathname.startsWith(href);
+
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                active
+                  ? "bg-violet-600/15 text-violet-300"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100",
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <Suspense
+        fallback={
+          <div className="hidden border-t border-zinc-800 px-3 py-4 lg:block">
+            <p className="px-3 text-xs text-zinc-500">Loading history...</p>
+          </div>
+        }
+      >
+        <HistoryPanel />
+      </Suspense>
+
+      <nav className="flex gap-2 overflow-x-auto px-4 pb-4 lg:flex-col lg:gap-1 lg:px-3">
+        {navItems.slice(1).map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
 
           return (

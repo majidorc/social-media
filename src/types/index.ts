@@ -49,4 +49,28 @@ export interface GenerateResponse {
   outputs: GenerationOutputs;
 }
 
+export interface WorkspaceHistoryItem {
+  id: string;
+  idea: string | null;
+  platforms: Platform[];
+  aiModel: string;
+  imageModel: string | null;
+  createdAt: string;
+}
+
+export interface WorkspaceDetail extends WorkspaceHistoryItem {
+  imageUrls: string[];
+  linkUrl: string | null;
+  videoUrls: string[];
+  outputs: GenerationOutputs;
+}
+
+export interface GenerationHistoryResponse {
+  history: WorkspaceHistoryItem[];
+}
+
+export interface WorkspaceDetailResponse {
+  workspace: WorkspaceDetail;
+}
+
 export type { LiveModelCatalog, LiveModelOption } from "@/lib/ai/model-types";

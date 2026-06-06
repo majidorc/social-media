@@ -43,6 +43,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/api/generate") ||
+    pathname.startsWith("/api/download-image") ||
     pathname.startsWith("/api/settings");
 
   if (isProtected && !isLoggedIn) {
@@ -89,6 +90,7 @@ export const config = {
     "/dashboard/:path*",
     "/settings/:path*",
     "/api/generate/:path*",
+    "/api/download-image",
     "/api/settings/:path*",
     "/api/models",
     "/api/models/:path*",

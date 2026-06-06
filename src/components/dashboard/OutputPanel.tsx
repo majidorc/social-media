@@ -1,10 +1,15 @@
 "use client";
 
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PLATFORM_OPTIONS } from "@/lib/constants";
+import {
+  buildImageDownloadFilename,
+  downloadImageAsset,
+} from "@/lib/download-image";
 import type { GenerationOutputs } from "@/types";
-import { Copy, ImageIcon, Loader2, Sparkles } from "lucide-react";
+import { Copy, Download, ImageIcon, Loader2, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -17,6 +22,8 @@ interface OutputPanelProps {
 export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const copyContent = async (platform: string, content: string) => {
     await navigator.clipboard.writeText(content);
@@ -28,6 +35,19 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
     await navigator.clipboard.writeText(prompt);
     setCopiedPrompt(true);
     setTimeout(() => setCopiedPrompt(false), 2000);
+  };
+
+  const handleDownloadImage = async (imageUrl: string) => {
+    setDownloadError(null);
+    setIsDownloading(true);
+
+    try {
+      await downloadImageAsset(imageUrl, buildImageDownloadFilename());
+    } catch {
+      setDownloadError("Download failed. Try again in a moment.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const imageModelLabel = outputs?.visuals?.imageModel ?? null;
@@ -76,6 +96,22 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   </h3>
                   {imageModelLabel ? <Badge>{imageModelLabel}</Badge> : null}
                 </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isDownloading}
+                  onClick={() =>
+                    handleDownloadImage(outputs.visuals?.imageUrl ?? "")
+                  }
+                >
+                  {isDownloading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  {isDownloading ? "Downloading..." : "Download image"}
+                </Button>
               </div>
               <div className="relative aspect-square w-full bg-zinc-900">
                 <Image
@@ -83,9 +119,15 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   alt="AI-generated social graphic"
                   fill
                   unoptimized
+                  crossOrigin="anonymous"
                   className="object-contain"
                 />
               </div>
+              {downloadError ? (
+                <p className="border-t border-zinc-800 px-4 py-2 text-xs text-red-300">
+                  {downloadError}
+                </p>
+              ) : null}
               <div className="space-y-3 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { KeyRound, Save, ShieldCheck } from "lucide-react";
+import { KeyRound, ExternalLink, Save, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
@@ -165,7 +165,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </div>
 
         <div className="space-y-5">
-          {API_KEY_PROVIDERS.map(({ provider, label, placeholder, description }) => {
+          {API_KEY_PROVIDERS.map(
+            ({ provider, label, placeholder, description, apiKeyHelpUrl }) => {
             const status = configuredKeys[provider];
 
             return (
@@ -181,6 +182,15 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                       ? `Configured · ${status.maskedKey}`
                       : "Not configured"}
                   </Badge>
+                  <a
+                    href={apiKeyHelpUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto inline-flex items-center gap-1 text-xs text-zinc-400 underline-offset-2 transition-colors hover:text-zinc-200 hover:underline"
+                  >
+                    How to get API key?
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
                 <p className="mb-3 text-xs text-zinc-500">{description}</p>
                 <Input

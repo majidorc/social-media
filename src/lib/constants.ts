@@ -47,17 +47,20 @@ export const API_KEY_PROVIDERS = [
     label: "OpenAI",
     placeholder: "sk-...",
     description: "Used for GPT and DALL-E models (discovered live from your account).",
+    apiKeyHelpUrl: "https://platform.openai.com/api-keys",
   },
   {
     provider: "GOOGLE" as const,
     label: "Google Gemini",
     placeholder: "AIza...",
     description: "Used for Gemini text and Imagen image models (synced via listModels).",
+    apiKeyHelpUrl: "https://aistudio.google.com/",
   },
   {
     provider: "ANTHROPIC" as const,
     label: "Anthropic",
     placeholder: "sk-ant-...",
     description: "Used for Claude models (discovered live from your account).",
+    apiKeyHelpUrl: "https://console.anthropic.com/settings/keys",
   },
 ];
