@@ -14,10 +14,10 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   OAuthCallback:
     "Google approved sign-in, but the app could not create your session. This is usually a database or adapter issue on the server.",
   OAuthCreateAccount: "Could not create your account. Try again or contact support.",
-  Callback:
-    "Google approved sign-in, but the callback failed before your session was saved.",
   google:
-    "Google approved sign-in, but the app could not save your session. Redeploy the latest version and confirm database migrations ran successfully.",
+    "Google approved sign-in, but the app could not save your session. If this persists, set NEXTAUTH_DEBUG=true in Coolify and check server logs after one sign-in attempt.",
+  OAuthAccountNotLinked:
+    "This Google account could not be linked to an existing user. Try another Google account or contact support.",
   Default: "Something went wrong during sign-in. Try again.",
 };
 
