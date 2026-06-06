@@ -79,5 +79,3 @@ export const API_KEY_PROVIDERS = [
     description: "Used for Claude Sonnet generations.",
   },
 ];
-
-export const DEMO_USER_EMAIL = "demo@aicontenthub.local";

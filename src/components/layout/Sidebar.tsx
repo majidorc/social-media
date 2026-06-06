@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
+import { UserMenu } from "@/components/layout/UserMenu";
 import { LayoutDashboard, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,7 +12,15 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  } | null;
+}
+
+export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -48,11 +57,21 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto hidden border-t border-zinc-800 p-4 lg:block">
-        <p className="rounded-xl bg-zinc-900/80 p-3 text-xs leading-relaxed text-zinc-500">
-          Multi-platform generation with optional inputs. Configure API keys in
-          Settings before going live.
-        </p>
+      <div className="mt-auto">
+        {user ? (
+          <UserMenu
+            name={user.name}
+            email={user.email}
+            image={user.image}
+          />
+        ) : (
+          <div className="hidden border-t border-zinc-800 p-4 lg:block">
+            <p className="rounded-xl bg-zinc-900/80 p-3 text-xs leading-relaxed text-zinc-500">
+              Multi-platform generation with optional inputs. Configure API keys
+              in Settings before going live.
+            </p>
+          </div>
+        )}
       </div>
     </aside>
   );

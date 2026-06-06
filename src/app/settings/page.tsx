@@ -3,12 +3,22 @@ export const dynamic = "force-dynamic";
 import { AppShell } from "@/components/layout/AppShell";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { getSettings } from "@/lib/actions/settings";
+import { getCurrentUser } from "@/lib/get-current-user";
 
 export default async function SettingsPage() {
-  const settings = await getSettings();
+  const [settings, user] = await Promise.all([
+    getSettings(),
+    getCurrentUser(),
+  ]);
 
   return (
-    <AppShell>
+    <AppShell
+      user={
+        user
+          ? { name: user.name, email: user.email, image: user.image }
+          : null
+      }
+    >
       <SettingsForm initialSettings={settings} />
     </AppShell>
   );

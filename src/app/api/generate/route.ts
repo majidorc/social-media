@@ -11,7 +11,7 @@ import {
 } from "@/lib/ai/generate-content";
 import { aiImageModelSchema, aiModelSchema } from "@/lib/ai/models";
 import { getDefaultModel, getSettings } from "@/lib/actions/settings";
-import { getDemoUser } from "@/lib/demo-user";
+import { requireCurrentUser } from "@/lib/get-current-user";
 import { prisma } from "@/lib/prisma";
 import type { GenerateResponse } from "@/types";
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await getDemoUser();
+    const user = await requireCurrentUser();
     const [settings, resolvedDefault] = await Promise.all([
       getSettings(),
       getDefaultModel(),
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const user = await getDemoUser();
+    const user = await requireCurrentUser();
 
     const history = await prisma.contentWorkspace.findMany({
       where: { userId: user.id },

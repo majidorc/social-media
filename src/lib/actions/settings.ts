@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { AiModel, AiProvider } from "@prisma/client";
-import { getDemoUser } from "@/lib/demo-user";
+import { requireCurrentUser } from "@/lib/get-current-user";
 import { decryptApiKey, encryptApiKey, maskApiKey } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
@@ -25,7 +25,7 @@ const saveDefaultModelSchema = z.object({
 });
 
 export async function getSettings(): Promise<SettingsResponse> {
-  const user = await getDemoUser();
+  const user = await requireCurrentUser();
 
   const settings = await prisma.userSettings.upsert({
     where: { userId: user.id },
@@ -72,7 +72,7 @@ export async function saveApiKeys(
     return { success: false, message: "Invalid API key payload." };
   }
 
-  const user = await getDemoUser();
+  const user = await requireCurrentUser();
   const entries: { provider: AiProvider; value?: string }[] = [
     { provider: "OPENAI", value: parsed.data.openai },
     { provider: "ANTHROPIC", value: parsed.data.anthropic },
@@ -134,7 +134,7 @@ export async function saveDefaultModel(
     };
   }
 
-  const user = await getDemoUser();
+  const user = await requireCurrentUser();
 
   await prisma.userSettings.upsert({
     where: { userId: user.id },

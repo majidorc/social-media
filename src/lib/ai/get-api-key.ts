@@ -1,5 +1,5 @@
 import type { AiProvider } from "@prisma/client";
-import { getDemoUser } from "@/lib/demo-user";
+import { requireCurrentUser } from "@/lib/get-current-user";
 import { decryptApiKey } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 
@@ -13,7 +13,7 @@ export class MissingApiKeyError extends Error {
 export async function getProviderApiKey(
   provider: AiProvider,
 ): Promise<string> {
-  const user = await getDemoUser();
+  const user = await requireCurrentUser();
 
   const record = await prisma.apiKey.findUnique({
     where: {
