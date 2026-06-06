@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { AiModel, Prisma } from "@prisma/client";
+import { isModelAvailable } from "@/lib/ai/available-models";
 import {
   generateContent,
   MissingApiKeyError,
 } from "@/lib/ai/generate-content";
 import { aiModelSchema } from "@/lib/ai/models";
+import { getDefaultModel, getSettings } from "@/lib/actions/settings";
 import { getDemoUser } from "@/lib/demo-user";
 import { prisma } from "@/lib/prisma";
 import type { GenerateResponse } from "@/types";
@@ -51,13 +53,33 @@ export async function POST(request: Request) {
     }
 
     const user = await getDemoUser();
-    const settings = await prisma.userSettings.upsert({
-      where: { userId: user.id },
-      create: { userId: user.id },
-      update: {},
-    });
+    const [settings, resolvedDefault] = await Promise.all([
+      getSettings(),
+      getDefaultModel(),
+    ]);
 
-    const model: AiModel = parsed.data.aiModel ?? settings.defaultAiModel;
+    let model: AiModel | null = resolvedDefault;
+
+    if (parsed.data.aiModel) {
+      if (!isModelAvailable(parsed.data.aiModel, settings.apiKeys)) {
+        return NextResponse.json(
+          {
+            error:
+              "That model requires an API key you have not configured yet. Update Settings or pick another model.",
+          },
+          { status: 400 },
+        );
+      }
+
+      model = parsed.data.aiModel;
+    }
+
+    if (!model) {
+      return NextResponse.json(
+        { error: "Add an API key in Settings before generating content." },
+        { status: 400 },
+      );
+    }
     const linkUrl = parsed.data.linkUrl?.trim() || undefined;
 
     const outputs = await generateContent(

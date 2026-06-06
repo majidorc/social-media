@@ -2,7 +2,8 @@
 
 import type { AiModel } from "@prisma/client";
 import { saveApiKeys, saveDefaultModel } from "@/lib/actions/settings";
-import { AI_MODEL_OPTIONS, API_KEY_PROVIDERS } from "@/lib/constants";
+import { getAvailableModelOptions } from "@/lib/ai/available-models";
+import { API_KEY_PROVIDERS } from "@/lib/constants";
 import type { SettingsResponse } from "@/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,15 +11,25 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { KeyRound, Save, ShieldCheck } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 interface SettingsFormProps {
   initialSettings: SettingsResponse;
 }
 
+function pickDefaultModel(settings: SettingsResponse): AiModel {
+  if (settings.availableModels.includes(settings.defaultAiModel)) {
+    return settings.defaultAiModel;
+  }
+
+  return settings.availableModels[0] ?? settings.defaultAiModel;
+}
+
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
-  const [defaultModel, setDefaultModel] = useState<AiModel>(
-    initialSettings.defaultAiModel,
+  const router = useRouter();
+  const [defaultModel, setDefaultModel] = useState<AiModel>(() =>
+    pickDefaultModel(initialSettings),
   );
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
@@ -30,6 +41,17 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const configuredKeys = Object.fromEntries(
     initialSettings.apiKeys.map((item) => [item.provider, item]),
   );
+
+  const modelOptions = useMemo(
+    () => getAvailableModelOptions(initialSettings.apiKeys),
+    [initialSettings.apiKeys],
+  );
+
+  const hasConfiguredKeys = modelOptions.length > 0;
+
+  useEffect(() => {
+    setDefaultModel(pickDefaultModel(initialSettings));
+  }, [initialSettings]);
 
   const handleSaveKeys = () => {
     startTransition(async () => {
@@ -47,6 +69,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         setOpenaiKey("");
         setAnthropicKey("");
         setGoogleKey("");
+        router.refresh();
         return;
       }
 
@@ -63,6 +86,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
       if (result.success) {
         setMessage(result.message);
+        router.refresh();
         return;
       }
 
@@ -78,8 +102,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           API keys & model preferences
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-zinc-400">
-          Store provider credentials securely and choose your default AI model
-          for the content generator.
+          Add your provider API keys first, then choose a default model from the
+          providers you have configured.
         </p>
       </header>
 
@@ -94,36 +118,6 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           {error ?? message}
         </div>
       )}
-
-      <Card
-        title="Default AI model"
-        description="This model is used across the dashboard unless you override it per generation."
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <Select
-              label="Preferred model"
-              value={defaultModel}
-              onChange={(event) =>
-                setDefaultModel(event.target.value as AiModel)
-              }
-              options={AI_MODEL_OPTIONS.map((option) => ({
-                value: option.value,
-                label: `${option.label} · ${option.provider}`,
-              }))}
-            />
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleSaveModel}
-            disabled={isPending}
-          >
-            <Save className="h-4 w-4" />
-            Save model
-          </Button>
-        </div>
-      </Card>
 
       <Card
         title="API keys"
@@ -190,6 +184,47 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             Save API keys
           </Button>
         </div>
+      </Card>
+
+      <Card
+        title="Default AI model"
+        description={
+          hasConfiguredKeys
+            ? "Only models from providers with a saved API key are shown here."
+            : "Save at least one API key above to unlock model selection."
+        }
+      >
+        {hasConfiguredKeys ? (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <Select
+                label="Preferred model"
+                value={defaultModel}
+                onChange={(event) =>
+                  setDefaultModel(event.target.value as AiModel)
+                }
+                options={modelOptions.map((option) => ({
+                  value: option.value,
+                  label: `${option.label} · ${option.provider}`,
+                }))}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleSaveModel}
+              disabled={isPending}
+            >
+              <Save className="h-4 w-4" />
+              Save model
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Configure OpenAI, Google Gemini, or Anthropic above — then pick your
+            default model from the matching options.
+          </p>
+        )}
       </Card>
     </div>
   );

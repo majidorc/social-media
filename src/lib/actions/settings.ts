@@ -7,7 +7,11 @@ import { getDemoUser } from "@/lib/demo-user";
 import { decryptApiKey, encryptApiKey, maskApiKey } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
-import { aiModelSchema } from "@/lib/ai/models";
+import {
+  getAvailableModels,
+  resolveDefaultModel,
+} from "@/lib/ai/available-models";
+import { aiModelSchema, getModelConfig } from "@/lib/ai/models";
 import type { ApiKeyStatus, SettingsResponse } from "@/types";
 
 const saveApiKeysSchema = z.object({
@@ -48,9 +52,12 @@ export async function getSettings(): Promise<SettingsResponse> {
     };
   });
 
+  const availableModels = getAvailableModels(apiKeyStatuses);
+
   return {
     defaultAiModel: settings.defaultAiModel,
     apiKeys: apiKeyStatuses,
+    availableModels,
   };
 }
 
@@ -108,6 +115,23 @@ export async function saveDefaultModel(
     return { success: false, message: "Invalid model selection." };
   }
 
+  const settings = await getSettings();
+
+  if (settings.availableModels.length === 0) {
+    return {
+      success: false,
+      message: "Add at least one API key before choosing a default model.",
+    };
+  }
+
+  if (!settings.availableModels.includes(parsed.data.defaultAiModel)) {
+    const provider = getModelConfig(parsed.data.defaultAiModel).provider;
+    return {
+      success: false,
+      message: `Configure your ${provider} API key before selecting this model.`,
+    };
+  }
+
   const user = await getDemoUser();
 
   await prisma.userSettings.upsert({
@@ -126,7 +150,7 @@ export async function saveDefaultModel(
   return { success: true, message: "Default model updated." };
 }
 
-export async function getDefaultModel(): Promise<AiModel> {
+export async function getDefaultModel(): Promise<AiModel | null> {
   const settings = await getSettings();
-  return settings.defaultAiModel;
+  return resolveDefaultModel(settings.defaultAiModel, settings.apiKeys);
 }

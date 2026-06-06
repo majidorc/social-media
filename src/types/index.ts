@@ -33,6 +33,7 @@ export interface ApiKeyStatus {
 export interface SettingsResponse {
   defaultAiModel: AiModel;
   apiKeys: ApiKeyStatus[];
+  availableModels: AiModel[];
 }
 
 export interface GenerateResponse {

@@ -10,14 +10,19 @@ import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
 import type { GenerateResponse, GenerationOutputs } from "@/types";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 
 interface ContentGeneratorProps {
-  defaultModel: AiModel;
+  defaultModel: AiModel | null;
+  availableModels: AiModel[];
 }
 
-export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
+export function ContentGenerator({
+  defaultModel,
+  availableModels,
+}: ContentGeneratorProps) {
   const [idea, setIdea] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
@@ -30,9 +35,16 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const canGenerate = defaultModel !== null || modelOverride !== "";
+
   const handleGenerate = async () => {
     if (platforms.length === 0) {
       setError("Select at least one target platform.");
+      return;
+    }
+
+    if (!canGenerate) {
+      setError("Add an API key in Settings before generating content.");
       return;
     }
 
@@ -88,6 +100,16 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
           generate tailored outputs for each platform you select.
         </p>
       </header>
+
+      {!defaultModel && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          No AI provider is configured yet.{" "}
+          <Link href="/settings" className="font-medium underline underline-offset-2">
+            Add an API key in Settings
+          </Link>{" "}
+          to unlock generation.
+        </div>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-2">
         <div className="space-y-6">
@@ -150,6 +172,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
             <div className="space-y-4">
               <ModelOverride
                 defaultModel={defaultModel}
+                availableModels={availableModels}
                 value={modelOverride}
                 onChange={setModelOverride}
               />
@@ -158,7 +181,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
                 size="lg"
                 className="w-full"
                 onClick={handleGenerate}
-                disabled={isLoading}
+                disabled={isLoading || !canGenerate}
               >
                 <Sparkles className="h-4 w-4" />
                 {isLoading ? "Generating..." : "Generate content"}
