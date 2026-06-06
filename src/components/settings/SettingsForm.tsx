@@ -1,7 +1,6 @@
 "use client";
 
 import type { AiModel } from "@prisma/client";
-import { saveApiKeys, saveDefaultModel } from "@/lib/actions/settings";
 import { getAvailableModelOptions } from "@/lib/ai/available-models";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
 import type { SettingsResponse } from "@/types";
@@ -58,22 +57,36 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       setMessage(null);
       setError(null);
 
-      const result = await saveApiKeys({
-        openai: openaiKey,
-        anthropic: anthropicKey,
-        google: googleKey,
-      });
+      try {
+        const response = await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            openai: openaiKey,
+            anthropic: anthropicKey,
+            google: googleKey,
+          }),
+        });
 
-      if (result.success) {
-        setMessage(result.message);
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to save API keys.");
+          return;
+        }
+
+        setMessage(result.message ?? "API keys saved securely.");
         setOpenaiKey("");
         setAnthropicKey("");
         setGoogleKey("");
         router.refresh();
-        return;
+      } catch {
+        setError("Failed to save API keys.");
       }
-
-      setError(result.message);
     });
   };
 
@@ -82,15 +95,29 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       setMessage(null);
       setError(null);
 
-      const result = await saveDefaultModel(defaultModel);
+      try {
+        const response = await fetch("/api/settings?action=model", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultAiModel: defaultModel }),
+        });
 
-      if (result.success) {
-        setMessage(result.message);
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to save default model.");
+          return;
+        }
+
+        setMessage(result.message ?? "Default model updated.");
         router.refresh();
-        return;
+      } catch {
+        setError("Failed to save default model.");
       }
-
-      setError(result.message);
     });
   };
 
