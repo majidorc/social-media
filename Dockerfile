@@ -4,17 +4,23 @@ FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
+# Coolify injects NODE_ENV=production at build time — override so devDependencies install.
 FROM base AS deps
+ENV NODE_ENV=development
+ENV NPM_CONFIG_PRODUCTION=false
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --no-audit --no-fund --ignore-scripts
 
 FROM base AS builder
+ENV NODE_ENV=development
+ENV NPM_CONFIG_PRODUCTION=false
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN npx prisma generate && npm run build
+RUN npm run build
 
 FROM base AS prod-deps
+ENV NODE_ENV=production
 COPY package.json package-lock.json .npmrc ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts && npx prisma generate
