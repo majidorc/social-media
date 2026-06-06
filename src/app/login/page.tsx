@@ -1,7 +1,17 @@
 import { Suspense } from "react";
 import { LoginCard } from "@/components/auth/LoginForm";
 
+function isAuthConfigured() {
+  return Boolean(
+    process.env.GOOGLE_CLIENT_ID &&
+      process.env.GOOGLE_CLIENT_SECRET &&
+      process.env.NEXTAUTH_SECRET,
+  );
+}
+
 export default function LoginPage() {
+  const authConfigured = isAuthConfigured();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 py-12">
       <Suspense
@@ -11,7 +21,7 @@ export default function LoginPage() {
           </div>
         }
       >
-        <LoginCard />
+        <LoginCard authConfigured={authConfigured} />
       </Suspense>
     </div>
   );

@@ -1,31 +1,58 @@
 "use client";
 
 import { APP_NAME } from "@/lib/constants";
-import { signIn } from "next-auth/react";
-import { Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-export function GoogleSignInButton() {
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  Configuration:
+    "Sign-in is not configured correctly. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and NEXTAUTH_URL on the server.",
+  AccessDenied: "Access was denied. Your Google account may not be allowed to sign in.",
+  Verification: "The sign-in link expired or was already used. Try again.",
+  OAuthSignin: "Could not start Google sign-in. Try again in a moment.",
+  OAuthCallback: "Google sign-in callback failed. Check your redirect URI in Google Cloud Console.",
+  OAuthCreateAccount: "Could not create your account. Try again or contact support.",
+  Callback: "Sign-in callback failed. Try again.",
+  Default: "Something went wrong during sign-in. Try again.",
+};
+
+function getAuthErrorMessage(errorCode: string | null): string | null {
+  if (!errorCode) {
+    return null;
+  }
+
+  return AUTH_ERROR_MESSAGES[errorCode] ?? AUTH_ERROR_MESSAGES.Default;
+}
+
+interface GoogleSignInButtonProps {
+  authConfigured: boolean;
+}
+
+export function GoogleSignInButton({ authConfigured }: GoogleSignInButtonProps) {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
 
-  const handleSignIn = async () => {
-    setIsLoading(true);
+  const signInUrl = useMemo(() => {
+    const params = new URLSearchParams({ callbackUrl });
+    return `/api/auth/signin/google?${params.toString()}`;
+  }, [callbackUrl]);
 
-    try {
-      await signIn("google", { callbackUrl });
-    } finally {
-      setIsLoading(false);
+  const handleSignIn = () => {
+    if (!authConfigured) {
+      return;
     }
+
+    setIsLoading(true);
+    window.location.assign(signInUrl);
   };
 
   return (
     <button
       type="button"
       onClick={handleSignIn}
-      disabled={isLoading}
+      disabled={isLoading || !authConfigured}
       className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-100 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {isLoading ? (
@@ -55,7 +82,14 @@ export function GoogleSignInButton() {
   );
 }
 
-export function LoginCard() {
+interface LoginCardProps {
+  authConfigured: boolean;
+}
+
+export function LoginCard({ authConfigured }: LoginCardProps) {
+  const searchParams = useSearchParams();
+  const authError = getAuthErrorMessage(searchParams.get("error"));
+
   return (
     <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl shadow-violet-950/20">
       <div className="mb-8 flex flex-col items-center text-center">
@@ -70,7 +104,27 @@ export function LoginCard() {
         </p>
       </div>
 
-      <GoogleSignInButton />
+      {!authConfigured ? (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Google sign-in is not configured on the server. Set{" "}
+            <code className="text-amber-100">GOOGLE_CLIENT_ID</code>,{" "}
+            <code className="text-amber-100">GOOGLE_CLIENT_SECRET</code>, and{" "}
+            <code className="text-amber-100">NEXTAUTH_SECRET</code>, then
+            redeploy.
+          </p>
+        </div>
+      ) : null}
+
+      {authError ? (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>{authError}</p>
+        </div>
+      ) : null}
+
+      <GoogleSignInButton authConfigured={authConfigured} />
 
       <p className="mt-6 text-center text-xs leading-relaxed text-zinc-500">
         Google is the only sign-in option. Your API keys and generated content
