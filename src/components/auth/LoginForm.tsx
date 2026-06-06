@@ -11,11 +11,31 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   AccessDenied: "Access was denied. Your Google account may not be allowed to sign in.",
   Verification: "The sign-in link expired or was already used. Try again.",
   OAuthSignin: "Could not start Google sign-in. Try again in a moment.",
-  OAuthCallback: "Google sign-in callback failed. Check your redirect URI in Google Cloud Console.",
+  OAuthCallback:
+    "Google approved sign-in, but the app could not create your session. This is usually a database or adapter issue on the server.",
   OAuthCreateAccount: "Could not create your account. Try again or contact support.",
-  Callback: "Sign-in callback failed. Try again.",
+  Callback:
+    "Google approved sign-in, but the callback failed before your session was saved.",
+  google:
+    "Google approved sign-in, but the app could not save your session. Redeploy the latest version and confirm database migrations ran successfully.",
   Default: "Something went wrong during sign-in. Try again.",
 };
+
+function normalizeCallbackUrl(raw: string | null): string {
+  if (!raw) {
+    return "/dashboard";
+  }
+
+  if (raw.startsWith("/")) {
+    return raw;
+  }
+
+  try {
+    return new URL(raw).pathname || "/dashboard";
+  } catch {
+    return "/dashboard";
+  }
+}
 
 function getAuthErrorMessage(errorCode: string | null): string | null {
   if (!errorCode) {
@@ -32,7 +52,7 @@ interface GoogleSignInButtonProps {
 export function GoogleSignInButton({ authConfigured }: GoogleSignInButtonProps) {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = normalizeCallbackUrl(searchParams.get("callbackUrl"));
 
   const signInUrl = useMemo(() => {
     const params = new URLSearchParams({ callbackUrl });
