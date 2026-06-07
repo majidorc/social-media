@@ -10,6 +10,7 @@ import { ImageModelSelector } from "@/components/dashboard/ImageModelSelector";
 import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
+import { Accordion } from "@/components/ui/Accordion";
 import { useLiveModels } from "@/hooks/useLiveModels";
 import {
   GENERATION_HISTORY_DELETED_EVENT,
@@ -22,6 +23,7 @@ import Link from "next/link";
 import { Loader2, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ContentGeneratorProps {
   defaultModel: string | null;
@@ -54,6 +56,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInputsExpanded, setIsInputsExpanded] = useState(true);
 
   const resetDashboardState = useCallback(() => {
     setIdea("");
@@ -68,6 +71,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     setEnableVideo(false);
     setOutputs(null);
     setError(null);
+    setIsInputsExpanded(true);
     loadedWorkspaceRef.current = null;
   }, []);
 
@@ -84,6 +88,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     setEnableVideo(workspace.enableVideo);
     setOutputs(workspace.outputs);
     setError(null);
+    setIsInputsExpanded(false);
   }, []);
 
   useEffect(() => {
@@ -236,6 +241,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
 
       const result = data as GenerateResponse;
       setOutputs(result.outputs);
+      setIsInputsExpanded(false);
       loadedWorkspaceRef.current = result.workspaceId;
       router.replace(`/dashboard?workspace=${result.workspaceId}`);
       notifyGenerationHistoryUpdated();
@@ -280,11 +286,24 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-2 xl:gap-6">
-        <div className="space-y-4 sm:space-y-6">
+      <div
+        className={cn(
+          "grid gap-4 xl:gap-6",
+          isInputsExpanded ? "xl:grid-cols-2" : "grid-cols-1",
+        )}
+      >
+        <div className={cn(!isInputsExpanded && "order-2")}>
+          <Accordion
+            expanded={isInputsExpanded}
+            onExpandedChange={setIsInputsExpanded}
+            title="Generation inputs"
+            collapsedTitle="Show/Edit Inputs"
+            description="Ideas, platforms, and model settings for your next run."
+          >
           <Card
             title="Inputs"
             description="All fields are optional. Provide as much or as little context as you need."
+            className="border-0 bg-transparent p-0 shadow-none"
           >
             <div className="space-y-5">
               <Textarea
@@ -333,11 +352,15 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
           <Card
             title="Target platforms"
             description="Choose one or more destinations for your content."
+            className="border-0 bg-transparent p-0 shadow-none"
           >
             <PlatformSelector selected={platforms} onChange={setPlatforms} />
           </Card>
 
-          <Card title="Generation config">
+          <Card
+            title="Generation config"
+            className="border-0 bg-transparent p-0 shadow-none"
+          >
             <div className="space-y-4">
               <ModelOverride
                 defaultModel={defaultModel}
@@ -383,13 +406,16 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
               </Button>
             </div>
           </Card>
+          </Accordion>
         </div>
 
-        <OutputPanel
-          outputs={outputs}
-          isLoading={isLoading || isLoadingHistory}
-          error={error}
-        />
+        <div className={cn(!isInputsExpanded && "order-1")}>
+          <OutputPanel
+            outputs={outputs}
+            isLoading={isLoading || isLoadingHistory}
+            error={error}
+          />
+        </div>
       </div>
     </div>
   );
