@@ -20,6 +20,13 @@ export interface VideoOutput {
   voiceoverCopy: string;
 }
 
+export interface GenerationUsage {
+  promptTokens: number;
+  completionTokens: number;
+  imageCount: number;
+  totalCost: number;
+}
+
 export interface GenerationOutputs {
   platforms: PlatformOutput[];
   blendedPrompt: string;
@@ -28,6 +35,7 @@ export interface GenerationOutputs {
   visualImagePrompt?: string;
   visuals?: VisualOutput;
   video?: VideoOutput;
+  usage?: GenerationUsage;
 }
 
 export interface GenerationInput {

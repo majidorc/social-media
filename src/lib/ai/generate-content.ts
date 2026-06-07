@@ -1,3 +1,4 @@
+import { buildGenerationUsage } from "@/lib/ai/cost-calculator";
 import {
   buildBlendedPrompt,
   buildGenerationPrompt,
@@ -8,6 +9,7 @@ import {
   normalizeModelId,
   resolveModelProvider,
 } from "@/lib/ai/models";
+import type { TextModelResult } from "@/lib/ai/providers";
 import {
   callAnthropic,
   callDalle,
@@ -26,7 +28,7 @@ export { MissingApiKeyError };
 async function callTextModel(
   modelId: string,
   messages: { system: string; user: string },
-): Promise<string> {
+): Promise<TextModelResult> {
   const provider = resolveModelProvider(modelId);
   const apiKey = await getProviderApiKey(provider);
   const normalizedId = normalizeModelId(modelId);
@@ -99,8 +101,10 @@ export async function generateContentWithVisuals(
     brandProfile,
   });
 
-  const rawResponse = await callTextModel(textModel, messages);
-  const parsed = parseModelJsonResponse(rawResponse);
+  const textResult = await callTextModel(textModel, messages);
+  const parsed = parseModelJsonResponse(textResult.content);
+
+  let imageCount = 0;
 
   const baseOutput: GenerationOutputs = {
     platforms: parsed.platforms,
@@ -118,6 +122,7 @@ export async function generateContentWithVisuals(
       buildFallbackImagePrompt(input, blendedPrompt);
 
     const visuals = await callImageModel(imageModel, imagePrompt);
+    imageCount = 1;
     const watermarkedImageUrl = await applyWatermarkIfConfigured(
       visuals.imageUrl,
       watermarkLogoUrl,
@@ -157,6 +162,17 @@ export async function generateContentWithVisuals(
       },
     };
   }
+
+  result = {
+    ...result,
+    usage: buildGenerationUsage({
+      textModelId: textModel,
+      promptTokens: textResult.usage.promptTokens,
+      completionTokens: textResult.usage.completionTokens,
+      imageModelId: imageModel,
+      imageCount,
+    }),
+  };
 
   return result;
 }

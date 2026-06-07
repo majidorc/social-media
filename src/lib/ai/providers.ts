@@ -1,7 +1,11 @@
+import type { TextModelResult, TokenUsage } from "@/lib/ai/provider-types";
+
 interface ChatMessage {
   system: string;
   user: string;
 }
+
+export type { TextModelResult, TokenUsage };
 
 export interface GeneratedImageResult {
   imageUrl: string;
@@ -12,7 +16,7 @@ export async function callOpenAI(
   apiKey: string,
   model: string,
   messages: ChatMessage,
-): Promise<string> {
+): Promise<TextModelResult> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -37,6 +41,10 @@ export async function callOpenAI(
 
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+    };
   };
 
   const content = data.choices?.[0]?.message?.content;
@@ -44,14 +52,20 @@ export async function callOpenAI(
     throw new Error("OpenAI returned an empty response.");
   }
 
-  return content;
+  return {
+    content,
+    usage: {
+      promptTokens: data.usage?.prompt_tokens ?? 0,
+      completionTokens: data.usage?.completion_tokens ?? 0,
+    },
+  };
 }
 
 export async function callAnthropic(
   apiKey: string,
   model: string,
   messages: ChatMessage,
-): Promise<string> {
+): Promise<TextModelResult> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -75,6 +89,10 @@ export async function callAnthropic(
 
   const data = (await response.json()) as {
     content?: Array<{ type: string; text?: string }>;
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+    };
   };
 
   const text = data.content?.find((block) => block.type === "text")?.text;
@@ -82,14 +100,20 @@ export async function callAnthropic(
     throw new Error("Anthropic returned an empty response.");
   }
 
-  return text;
+  return {
+    content: text,
+    usage: {
+      promptTokens: data.usage?.input_tokens ?? 0,
+      completionTokens: data.usage?.output_tokens ?? 0,
+    },
+  };
 }
 
 export async function callGemini(
   apiKey: string,
   model: string,
   messages: ChatMessage,
-): Promise<string> {
+): Promise<TextModelResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const response = await fetch(url, {
@@ -114,6 +138,10 @@ export async function callGemini(
     candidates?: Array<{
       content?: { parts?: Array<{ text?: string }> };
     }>;
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+    };
   };
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -121,7 +149,13 @@ export async function callGemini(
     throw new Error("Gemini returned an empty response.");
   }
 
-  return text;
+  return {
+    content: text,
+    usage: {
+      promptTokens: data.usageMetadata?.promptTokenCount ?? 0,
+      completionTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+    },
+  };
 }
 
 export async function callDalle(

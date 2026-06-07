@@ -3,6 +3,11 @@
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import {
+  formatTokenCount,
+  formatUsageCost,
+  getTotalTokenCount,
+} from "@/lib/ai/cost-calculator";
 import { cn } from "@/lib/utils";
 import { PLATFORM_OPTIONS } from "@/lib/constants";
 import {
@@ -328,6 +333,37 @@ export function OutputPanel({
               )}
             </div>
           </div>
+
+          {outputs.usage ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-card-muted px-4 py-3 text-xs">
+              <span className="font-medium text-foreground">
+                Tokens: {formatTokenCount(getTotalTokenCount(outputs.usage))}
+              </span>
+              <span className="text-muted" aria-hidden="true">
+                |
+              </span>
+              <span className="text-muted">
+                In: {formatTokenCount(outputs.usage.promptTokens)} · Out:{" "}
+                {formatTokenCount(outputs.usage.completionTokens)}
+              </span>
+              {outputs.usage.imageCount > 0 ? (
+                <>
+                  <span className="text-muted" aria-hidden="true">
+                    |
+                  </span>
+                  <span className="text-muted">
+                    Images: {outputs.usage.imageCount}
+                  </span>
+                </>
+              ) : null}
+              <span className="text-muted" aria-hidden="true">
+                |
+              </span>
+              <span className="font-medium text-accent-text">
+                Cost: {formatUsageCost(outputs.usage.totalCost)}
+              </span>
+            </div>
+          ) : null}
 
           <SchedulePostSection
             workspaceId={workspaceId}
