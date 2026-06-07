@@ -3,7 +3,8 @@
 import { cn } from "@/lib/utils";
 import {
   formatRelativeTime,
-  truncateLabel,
+  getHistoryItemTitle,
+  truncateHistoryTitle,
 } from "@/lib/format-relative-time";
 import {
   GENERATION_HISTORY_UPDATED_EVENT,
@@ -105,8 +106,8 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
   ) => {
     event.stopPropagation();
 
-    const label = truncateLabel(
-      history.find((item) => item.id === workspaceId)?.idea,
+    const label = truncateHistoryTitle(
+      getHistoryItemTitle(history.find((item) => item.id === workspaceId)?.idea),
       48,
     );
 
@@ -255,6 +256,8 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
             const isActive =
               pathname.startsWith("/dashboard") && activeWorkspaceId === item.id;
             const isDeleting = deletingId === item.id;
+            const title = getHistoryItemTitle(item.idea);
+            const timestamp = formatRelativeTime(item.createdAt);
 
             return (
               <li key={item.id}>
@@ -272,24 +275,28 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
                     disabled={isMutating}
                     className="min-w-0 flex-1 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <p
+                    <span
                       className={cn(
-                        "truncate text-sm font-medium",
+                        "block max-w-[180px] truncate text-sm font-medium leading-snug",
                         isActive ? "text-accent-text" : "text-foreground",
                       )}
+                      title={title}
                     >
-                      {truncateLabel(item.idea)}
-                    </p>
-                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
-                      <Clock3 className="h-3 w-3 shrink-0" />
-                      <span>{formatRelativeTime(item.createdAt)}</span>
+                      {title}
+                    </span>
+                    <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-muted">
+                      <Clock3 className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{timestamp}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{item.platforms.length} platforms</span>
-                    </div>
+                      <span className="shrink-0">
+                        {item.platforms.length}{" "}
+                        {item.platforms.length === 1 ? "platform" : "platforms"}
+                      </span>
+                    </span>
                   </button>
                   <button
                     type="button"
-                    aria-label={`Delete ${truncateLabel(item.idea, 32)}`}
+                    aria-label={`Delete ${truncateHistoryTitle(title, 32)}`}
                     onClick={(event) => void handleDeleteItem(event, item.id)}
                     disabled={isMutating}
                     className={cn(

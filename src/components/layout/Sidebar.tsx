@@ -117,6 +117,7 @@ export function SidebarContent({
           </div>
         }
       >
+        {/* Sidebar generation history — titles from workspace idea + relative timestamps */}
         <HistoryPanel onNavigate={onNavigate} />
       </Suspense>
 

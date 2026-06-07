@@ -2,6 +2,25 @@ const MINUTE = 60_000;
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
 
+export const HISTORY_TITLE_FALLBACK = "Untitled Generation";
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function getHistoryItemTitle(idea: string | null | undefined): string {
+  const trimmed = idea?.trim();
+  return trimmed || HISTORY_TITLE_FALLBACK;
+}
+
+export function truncateHistoryTitle(title: string, max = 42): string {
+  if (title.length <= max) {
+    return title;
+  }
+
+  return `${title.slice(0, max - 1)}…`;
+}
+
 export function formatRelativeTime(isoDate: string): string {
   const date = new Date(isoDate);
   const diffMs = Date.now() - date.getTime();
@@ -16,30 +35,34 @@ export function formatRelativeTime(isoDate: string): string {
 
   if (diffMs < HOUR) {
     const minutes = Math.floor(diffMs / MINUTE);
-    return `${minutes}m ago`;
+    return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
   }
 
   if (diffMs < DAY) {
     const hours = Math.floor(diffMs / HOUR);
-    return `${hours}h ago`;
+    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+  }
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const yesterdayStart = new Date(todayStart.getTime() - DAY);
+
+  if (startOfDay(date).getTime() === yesterdayStart.getTime()) {
+    return "Yesterday";
   }
 
   if (diffMs < DAY * 7) {
     const days = Math.floor(diffMs / DAY);
-    return `${days}d ago`;
+    return days === 1 ? "1 day ago" : `${days} days ago`;
   }
 
   return date.toLocaleDateString(undefined, {
-    month: "short",
+    month: "long",
     day: "numeric",
   });
 }
 
+/** @deprecated Use getHistoryItemTitle + truncateHistoryTitle instead. */
 export function truncateLabel(text: string | null | undefined, max = 42): string {
-  const value = text?.trim() || "Untitled generation";
-  if (value.length <= max) {
-    return value;
-  }
-
-  return `${value.slice(0, max - 1)}…`;
+  return truncateHistoryTitle(getHistoryItemTitle(text), max);
 }
