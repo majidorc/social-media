@@ -43,43 +43,52 @@ export async function applyWatermark(
   const padding = options?.padding ?? WATERMARK_CORNER_PADDING_PX;
   const position = resolveWatermarkPosition(options?.position ?? undefined);
 
-  const [imageBuffer, logoBuffer] = await Promise.all([
+  const [baseImageBuffer, logoSourceBuffer] = await Promise.all([
     loadImageBuffer(imageUrl),
     loadImageBuffer(logoUrl),
   ]);
 
-  const image = sharp(imageBuffer);
-  const metadata = await image.metadata();
-  const imageWidth = metadata.width ?? 1024;
-  const imageHeight = metadata.height ?? 1024;
+  const baseMetadata = await sharp(baseImageBuffer).metadata();
+  const baseWidth = baseMetadata.width;
+  const baseHeight = baseMetadata.height;
 
-  const maxLogoWidth = Math.max(1, Math.round(imageWidth * MAX_LOGO_WIDTH_RATIO));
-  const logo = sharp(logoBuffer).resize({
-    width: maxLogoWidth,
-    fit: "inside",
-    withoutEnlargement: true,
-  });
+  if (!baseWidth || !baseHeight) {
+    throw new Error("Generated image is missing width or height metadata.");
+  }
 
-  const logoMeta = await logo.metadata();
-  const logoWidth = logoMeta.width ?? maxLogoWidth;
-  const logoHeight = logoMeta.height ?? maxLogoWidth;
-  const logoPng = await logo.png().toBuffer();
+  const maxLogoWidth = Math.max(1, Math.round(baseWidth * MAX_LOGO_WIDTH_RATIO));
+  const logoBuffer = await sharp(logoSourceBuffer)
+    .resize({
+      width: maxLogoWidth,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .png()
+    .toBuffer();
+
+  const logoMetadata = await sharp(logoBuffer).metadata();
+  const logoWidth = logoMetadata.width;
+  const logoHeight = logoMetadata.height;
+
+  if (!logoWidth || !logoHeight) {
+    throw new Error("Watermark logo is missing width or height metadata.");
+  }
 
   const { left, top } = computeWatermarkCoordinates(
     position,
-    imageWidth,
-    imageHeight,
+    baseWidth,
+    baseHeight,
     logoWidth,
     logoHeight,
     padding,
   );
 
-  const outputFormat = metadata.format === "jpeg" ? "jpeg" : "png";
-  const composited = image.composite([
+  const outputFormat = baseMetadata.format === "jpeg" ? "jpeg" : "png";
+  const composited = sharp(baseImageBuffer).composite([
     {
-      input: logoPng,
-      left: Math.max(0, left),
-      top: Math.max(0, top),
+      input: logoBuffer,
+      top,
+      left,
     },
   ]);
 

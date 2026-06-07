@@ -7,9 +7,7 @@ import { cn } from "@/lib/utils";
 import { PLATFORM_OPTIONS } from "@/lib/constants";
 import {
   buildImageDownloadFilename,
-  buildVideoDownloadFilename,
   downloadImageAsset,
-  downloadVideoAsset,
 } from "@/lib/download-image";
 import type { GenerationOutputs } from "@/types";
 import {
@@ -21,7 +19,7 @@ import {
   Video,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SchedulePostSection } from "@/components/dashboard/SchedulePostSection";
 
 interface OutputPanelProps {
@@ -33,7 +31,7 @@ interface OutputPanelProps {
   error: string | null;
 }
 
-type OutputTab = "platforms" | "video";
+type OutputTab = "platforms" | "video-script";
 
 export function OutputPanel({
   workspaceId,
@@ -49,17 +47,7 @@ export function OutputPanel({
   const [copiedVideoScript, setCopiedVideoScript] = useState(false);
   const [copiedVoiceover, setCopiedVoiceover] = useState(false);
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
-  const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (outputs?.video) {
-      setActiveTab("video");
-      return;
-    }
-
-    setActiveTab("platforms");
-  }, [outputs?.video?.url]);
 
   const copyContent = async (platform: string, content: string) => {
     await navigator.clipboard.writeText(content);
@@ -89,26 +77,15 @@ export function OutputPanel({
     }
   };
 
-  const handleDownloadVideo = async (videoUrl: string) => {
-    setDownloadError(null);
-    setIsDownloadingVideo(true);
-
-    try {
-      await downloadVideoAsset(videoUrl, buildVideoDownloadFilename());
-    } catch {
-      setDownloadError("Video download failed. Try again in a moment.");
-    } finally {
-      setIsDownloadingVideo(false);
-    }
-  };
-
   const imageModelLabel = outputs?.visuals?.imageModel ?? null;
-  const hasVideo = Boolean(outputs?.video?.url);
+  const hasVideoScript = Boolean(
+    outputs?.video?.script?.trim() || outputs?.video?.voiceoverCopy?.trim(),
+  );
 
   return (
     <Card
       title="Generated outputs"
-      description="Platform copy, optional graphics, and video assets appear here after generation."
+      description="Platform copy, optional graphics, and video scripts appear here after generation."
       className="h-full"
     >
       {isLoading ? (
@@ -139,157 +116,134 @@ export function OutputPanel({
             </p>
           </div>
 
-          {outputs.visuals ? (
-            <article className="overflow-hidden rounded-xl border border-border bg-card-muted">
-              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-accent-text" />
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Generated graphic
-                  </h3>
-                  {imageModelLabel ? <Badge>{imageModelLabel}</Badge> : null}
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={isDownloadingImage}
-                  onClick={() =>
-                    handleDownloadImage(outputs.visuals?.imageUrl ?? "")
-                  }
-                >
-                  {isDownloadingImage ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Download className="h-3.5 w-3.5" />
-                  )}
-                  {isDownloadingImage ? "Downloading..." : "Download image"}
-                </Button>
-              </div>
-              <div className="relative aspect-square w-full bg-card-muted">
-                <Image
-                  src={outputs.visuals.imageUrl}
-                  alt="AI-generated social graphic"
-                  fill
-                  unoptimized
-                  crossOrigin="anonymous"
-                  className="object-contain"
-                />
-              </div>
-              <div className="space-y-3 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Image prompt used
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void copyText(
-                        outputs.visuals?.promptUsed ?? "",
-                        setCopiedPrompt,
-                      )
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    {copiedPrompt ? "Copied" : "Copy"}
-                  </button>
-                </div>
-                <p className="text-sm leading-relaxed text-foreground">
-                  {outputs.visuals.promptUsed}
-                </p>
-              </div>
-            </article>
-          ) : outputs.visualImagePrompt ? (
-            <div className="rounded-xl border border-border bg-card-muted p-4">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
-                Visual image prompt
-              </p>
-              <p className="text-sm leading-relaxed text-foreground">
-                {outputs.visualImagePrompt}
-              </p>
-            </div>
-          ) : null}
-
           {downloadError ? (
             <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-300">
               {downloadError}
             </p>
           ) : null}
 
-          <div className="space-y-4">
-            <div className="flex gap-2 border-b border-border">
-              <button
-                type="button"
-                onClick={() => setActiveTab("platforms")}
-                className={cn(
-                  "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-                  activeTab === "platforms"
-                    ? "border-violet-500 text-accent-text"
-                    : "border-transparent text-muted hover:text-foreground",
-                )}
-              >
-                Platforms
-              </button>
-              {hasVideo ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="space-y-4 lg:col-span-5">
+              {outputs.visuals ? (
+                <article className="overflow-hidden rounded-xl border border-border bg-card-muted">
+                  <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-accent-text" />
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Generated graphic
+                      </h3>
+                      {imageModelLabel ? <Badge>{imageModelLabel}</Badge> : null}
+                    </div>
+                  </div>
+                  <div className="relative aspect-square w-full bg-card-muted">
+                    <Image
+                      src={outputs.visuals.imageUrl}
+                      alt="AI-generated social graphic"
+                      fill
+                      unoptimized
+                      crossOrigin="anonymous"
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="space-y-3 border-t border-border p-4">
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={isDownloadingImage}
+                      onClick={() =>
+                        handleDownloadImage(outputs.visuals?.imageUrl ?? "")
+                      }
+                    >
+                      {isDownloadingImage ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      {isDownloadingImage ? "Downloading..." : "Download image"}
+                    </Button>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                        Image prompt used
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void copyText(
+                            outputs.visuals?.promptUsed ?? "",
+                            setCopiedPrompt,
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {copiedPrompt ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {outputs.visuals.promptUsed}
+                    </p>
+                  </div>
+                </article>
+              ) : outputs.visualImagePrompt ? (
+                <div className="rounded-xl border border-border bg-card-muted p-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                    Visual image prompt
+                  </p>
+                  <p className="text-sm leading-relaxed text-foreground">
+                    {outputs.visualImagePrompt}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex min-h-48 items-center justify-center rounded-xl border border-dashed border-border bg-card-muted p-6 text-center">
+                  <p className="text-sm text-muted">
+                    No image was generated for this run.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4 lg:col-span-7">
+              <div className="flex gap-2 border-b border-border">
                 <button
                   type="button"
-                  onClick={() => setActiveTab("video")}
+                  onClick={() => setActiveTab("platforms")}
                   className={cn(
-                    "inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-                    activeTab === "video"
+                    "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+                    activeTab === "platforms"
                       ? "border-violet-500 text-accent-text"
                       : "border-transparent text-muted hover:text-foreground",
                   )}
                 >
-                  <Video className="h-3.5 w-3.5" />
-                  Video
+                  Platforms
                 </button>
-              ) : null}
-            </div>
-
-            {activeTab === "video" && outputs.video ? (
-              <article className="overflow-hidden rounded-xl border border-border bg-card-muted">
-                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Video className="h-4 w-4 text-accent-text" />
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Generated video
-                    </h3>
-                    <Badge>Preview</Badge>
-                  </div>
-                  <Button
+                {hasVideoScript ? (
+                  <button
                     type="button"
-                    variant="secondary"
-                    size="sm"
-                    disabled={isDownloadingVideo}
-                    onClick={() => handleDownloadVideo(outputs.video?.url ?? "")}
-                  >
-                    {isDownloadingVideo ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
+                    onClick={() => setActiveTab("video-script")}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+                      activeTab === "video-script"
+                        ? "border-violet-500 text-accent-text"
+                        : "border-transparent text-muted hover:text-foreground",
                     )}
-                    {isDownloadingVideo ? "Downloading..." : "Download video"}
-                  </Button>
-                </div>
-                <div className="bg-black p-3">
-                  <video
-                    src={outputs.video.url}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    className="aspect-video w-full rounded-lg bg-card-muted"
                   >
-                    Your browser does not support HTML5 video playback.
-                  </video>
-                </div>
-                <div className="space-y-4 p-4">
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Video script
-                      </p>
+                    <Video className="h-3.5 w-3.5" />
+                    Reels/TikTok Script
+                  </button>
+                ) : null}
+              </div>
+
+              {activeTab === "video-script" && outputs.video ? (
+                <div className="space-y-4">
+                  <article className="rounded-xl border border-border bg-card-muted p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Video className="h-4 w-4 text-accent-text" />
+                        <h3 className="text-sm font-semibold text-foreground">
+                          Video script
+                        </h3>
+                        <Badge>Script</Badge>
+                      </div>
                       <button
                         type="button"
                         onClick={() =>
@@ -298,7 +252,7 @@ export function OutputPanel({
                             setCopiedVideoScript,
                           )
                         }
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
                       >
                         <Copy className="h-3.5 w-3.5" />
                         {copiedVideoScript ? "Copied" : "Copy"}
@@ -307,12 +261,13 @@ export function OutputPanel({
                     <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
                       {outputs.video.script}
                     </pre>
-                  </div>
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Voiceover copy
-                      </p>
+                  </article>
+
+                  <article className="rounded-xl border border-border bg-card-muted p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Voiceover narration
+                      </h3>
                       <button
                         type="button"
                         onClick={() =>
@@ -321,7 +276,7 @@ export function OutputPanel({
                             setCopiedVoiceover,
                           )
                         }
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
                       >
                         <Copy className="h-3.5 w-3.5" />
                         {copiedVoiceover ? "Copied" : "Copy"}
@@ -330,48 +285,48 @@ export function OutputPanel({
                     <p className="text-sm leading-relaxed text-foreground">
                       {outputs.video.voiceoverCopy}
                     </p>
-                  </div>
+                  </article>
                 </div>
-              </article>
-            ) : (
-              <div className="space-y-4">
-                {outputs.platforms.map((item) => {
-                  const label =
-                    PLATFORM_OPTIONS.find(
-                      (option) => option.value === item.platform,
-                    )?.label ?? item.platform;
+              ) : (
+                <div className="space-y-4">
+                  {outputs.platforms.map((item) => {
+                    const label =
+                      PLATFORM_OPTIONS.find(
+                        (option) => option.value === item.platform,
+                      )?.label ?? item.platform;
 
-                  return (
-                    <article
-                      key={item.platform}
-                      className="rounded-xl border border-border bg-card-muted p-4"
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-semibold text-foreground">
-                            {label}
-                          </h3>
-                          <Badge>{item.platform}</Badge>
+                    return (
+                      <article
+                        key={item.platform}
+                        className="rounded-xl border border-border bg-card-muted p-4"
+                      >
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              {label}
+                            </h3>
+                            <Badge>{item.platform}</Badge>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void copyContent(item.platform, item.content)
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            {copiedPlatform === item.platform ? "Copied" : "Copy"}
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void copyContent(item.platform, item.content)
-                          }
-                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          {copiedPlatform === item.platform ? "Copied" : "Copy"}
-                        </button>
-                      </div>
-                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
-                        {item.content}
-                      </pre>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
+                        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
+                          {item.content}
+                        </pre>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <SchedulePostSection

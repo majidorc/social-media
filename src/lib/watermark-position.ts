@@ -60,8 +60,8 @@ export function computeWatermarkCoordinates(
       };
     case "CENTER":
       return {
-        top: Math.round((imageHeight - logoHeight) / 2),
-        left: Math.round((imageWidth - logoWidth) / 2),
+        top: Math.floor((imageHeight - logoHeight) / 2),
+        left: Math.floor((imageWidth - logoWidth) / 2),
       };
     default:
       return {
