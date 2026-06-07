@@ -66,6 +66,7 @@ export interface GenerateResponse {
 export interface WorkspaceHistoryItem {
   id: string;
   idea: string | null;
+  displayTitle: string;
   platforms: Platform[];
   aiModel: string;
   imageModel: string | null;

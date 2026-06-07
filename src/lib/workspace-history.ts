@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { resolveHistoryItemTitle } from "@/lib/history-display";
 import type {
   GenerationOutputs,
   WorkspaceDetail,
@@ -48,11 +49,12 @@ export function toWorkspaceHistoryItem(
     | "imageModel"
     | "scheduledFor"
     | "createdAt"
-  >,
+  > & { outputs?: Prisma.JsonValue },
 ): WorkspaceHistoryItem {
   return {
     id: workspace.id,
     idea: workspace.idea,
+    displayTitle: resolveHistoryItemTitle(workspace.idea, workspace.outputs),
     platforms: workspace.platforms,
     aiModel: workspace.aiModel,
     imageModel: workspace.imageModel,

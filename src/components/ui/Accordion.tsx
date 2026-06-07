@@ -14,6 +14,41 @@ interface AccordionProps {
   className?: string;
 }
 
+interface AccordionCollapsedBarProps {
+  onExpand: () => void;
+  collapsedTitle?: string;
+  hint?: string;
+  className?: string;
+}
+
+export function AccordionCollapsedBar({
+  onExpand,
+  collapsedTitle = "Show/Edit Inputs",
+  hint = "Tap to adjust your prompt, platforms, or models",
+  className,
+}: AccordionCollapsedBarProps) {
+  return (
+    <button
+      type="button"
+      aria-expanded={false}
+      onClick={onExpand}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-2xl border border-violet-500/25 bg-card px-4 py-3.5 text-left shadow-sm shadow-black/5 transition-colors hover:border-violet-500/40 hover:bg-card-muted sm:px-5",
+        "dark:shadow-black/20",
+        className,
+      )}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-foreground sm:text-base">
+          {collapsedTitle}
+        </span>
+        <span className="mt-0.5 block text-xs text-muted sm:text-sm">{hint}</span>
+      </span>
+      <ChevronDown className="h-5 w-5 shrink-0 text-accent-text" aria-hidden />
+    </button>
+  );
+}
+
 export function Accordion({
   expanded,
   onExpandedChange,

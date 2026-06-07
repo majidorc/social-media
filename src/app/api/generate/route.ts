@@ -201,6 +201,7 @@ export async function GET() {
         imageModel: true,
         scheduledFor: true,
         createdAt: true,
+        outputs: true,
       },
     });
 

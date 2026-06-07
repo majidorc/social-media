@@ -1,11 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/format-relative-time";
 import {
-  formatRelativeTime,
-  getHistoryItemTitle,
+  resolveHistoryItemTitle,
   truncateHistoryTitle,
-} from "@/lib/format-relative-time";
+} from "@/lib/history-display";
 import {
   GENERATION_HISTORY_UPDATED_EVENT,
   notifyGenerationHistoryDeleted,
@@ -106,8 +106,10 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
   ) => {
     event.stopPropagation();
 
+    const item = history.find((entry) => entry.id === workspaceId);
     const label = truncateHistoryTitle(
-      getHistoryItemTitle(history.find((item) => item.id === workspaceId)?.idea),
+      item?.displayTitle ??
+        resolveHistoryItemTitle(item?.idea),
       48,
     );
 
@@ -256,7 +258,7 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
             const isActive =
               pathname.startsWith("/dashboard") && activeWorkspaceId === item.id;
             const isDeleting = deletingId === item.id;
-            const title = getHistoryItemTitle(item.idea);
+            const title = item.displayTitle;
             const timestamp = formatRelativeTime(item.createdAt);
 
             return (

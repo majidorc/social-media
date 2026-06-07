@@ -2,23 +2,8 @@ const MINUTE = 60_000;
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
 
-export const HISTORY_TITLE_FALLBACK = "Untitled Generation";
-
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-export function getHistoryItemTitle(idea: string | null | undefined): string {
-  const trimmed = idea?.trim();
-  return trimmed || HISTORY_TITLE_FALLBACK;
-}
-
-export function truncateHistoryTitle(title: string, max = 42): string {
-  if (title.length <= max) {
-    return title;
-  }
-
-  return `${title.slice(0, max - 1)}…`;
 }
 
 export function formatRelativeTime(isoDate: string): string {
@@ -62,7 +47,10 @@ export function formatRelativeTime(isoDate: string): string {
   });
 }
 
-/** @deprecated Use getHistoryItemTitle + truncateHistoryTitle instead. */
-export function truncateLabel(text: string | null | undefined, max = 42): string {
-  return truncateHistoryTitle(getHistoryItemTitle(text), max);
-}
+export {
+  getHistoryItemTitle,
+  HISTORY_TITLE_FALLBACK,
+  resolveHistoryItemTitle,
+  truncateHistoryTitle,
+  truncateLabel,
+} from "@/lib/history-display";

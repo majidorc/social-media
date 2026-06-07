@@ -10,7 +10,7 @@ import { ImageModelSelector } from "@/components/dashboard/ImageModelSelector";
 import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
-import { Accordion } from "@/components/ui/Accordion";
+import { Accordion, AccordionCollapsedBar } from "@/components/ui/Accordion";
 import { useLiveModels } from "@/hooks/useLiveModels";
 import {
   GENERATION_HISTORY_DELETED_EVENT,
@@ -290,13 +290,17 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
         </div>
       )}
 
+      {!isInputsExpanded ? (
+        <AccordionCollapsedBar onExpand={() => setIsInputsExpanded(true)} />
+      ) : null}
+
       <div
         className={cn(
           "grid gap-4 xl:gap-6",
           isInputsExpanded ? "xl:grid-cols-2" : "grid-cols-1",
         )}
       >
-        <div className={cn(!isInputsExpanded && "order-2")}>
+        {isInputsExpanded ? (
           <Accordion
             expanded={isInputsExpanded}
             onExpandedChange={setIsInputsExpanded}
@@ -411,10 +415,9 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
             </div>
           </Card>
           </Accordion>
-        </div>
+        ) : null}
 
-        <div className={cn(!isInputsExpanded && "order-1")}>
-          <OutputPanel
+        <OutputPanel
             workspaceId={workspaceId}
             scheduledFor={scheduledFor}
             onScheduledChange={setScheduledFor}
@@ -422,7 +425,6 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
             isLoading={isLoading || isLoadingHistory}
             error={error}
           />
-        </div>
       </div>
     </div>
   );
