@@ -17,6 +17,7 @@ import {
   callVideoOrTtsAPI,
 } from "@/lib/ai/providers";
 import { applyWatermarkIfConfigured } from "@/lib/image/watermark";
+import type { BrandProfileContext } from "@/lib/brand-profile";
 import type { GenerationInput, GenerationOutputs } from "@/types";
 import type { WatermarkPosition } from "@prisma/client";
 
@@ -87,6 +88,7 @@ export async function generateContentWithVisuals(
   imageModel?: string,
   watermarkLogoUrl?: string | null,
   watermarkPosition?: WatermarkPosition | null,
+  brandProfile?: BrandProfileContext | null,
 ): Promise<GenerationOutputs> {
   const blendedPrompt = buildBlendedPrompt(input);
   const includeVisualPrompt = Boolean(imageModel);
@@ -94,6 +96,7 @@ export async function generateContentWithVisuals(
   const messages = buildGenerationPrompt(input, blendedPrompt, {
     includeVisualPrompt,
     includeVideoMetadata,
+    brandProfile,
   });
 
   const rawResponse = await callTextModel(textModel, messages);

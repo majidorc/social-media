@@ -137,6 +137,12 @@ export async function POST(request: Request) {
       imageModel,
       settings.watermarkLogoUrl,
       settings.watermarkPosition,
+      {
+        companyName: settings.companyName,
+        businessDescription: settings.businessDescription,
+        websiteUrl: settings.websiteUrl,
+        socialHandle: settings.socialHandle,
+      },
     );
 
     const workspace = await prisma.contentWorkspace.create({

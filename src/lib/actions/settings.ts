@@ -14,6 +14,7 @@ import {
 } from "@/lib/ai/available-models";
 import { findModelOption, textModelSchema } from "@/lib/ai/models";
 import { resolveWatermarkPosition } from "@/lib/watermark-position";
+import { normalizeBrandProfileField } from "@/lib/brand-profile";
 import type { ApiKeyStatus, SettingsResponse } from "@/types";
 
 const MAX_WATERMARK_BYTES = 2 * 1024 * 1024;
@@ -35,6 +36,21 @@ const saveWatermarkPositionSchema = z.enum([
   "BOTTOM_RIGHT",
   "CENTER",
 ]);
+
+const optionalWebsiteUrl = z
+  .string()
+  .trim()
+  .optional()
+  .refine((value) => !value || z.string().url().safeParse(value).success, {
+    message: "Enter a valid website URL.",
+  });
+
+const saveBrandProfileSchema = z.object({
+  companyName: z.string().trim().max(200).optional(),
+  businessDescription: z.string().trim().max(5000).optional(),
+  websiteUrl: optionalWebsiteUrl,
+  socialHandle: z.string().trim().max(100).optional(),
+});
 
 export async function getSettings(): Promise<SettingsResponse> {
   const user = await requireCurrentUser();
@@ -68,6 +84,10 @@ export async function getSettings(): Promise<SettingsResponse> {
     defaultAiModel: settings.defaultAiModel,
     watermarkLogoUrl: settings.watermarkLogoUrl,
     watermarkPosition: resolveWatermarkPosition(settings.watermarkPosition),
+    companyName: settings.companyName,
+    businessDescription: settings.businessDescription,
+    websiteUrl: settings.websiteUrl,
+    socialHandle: settings.socialHandle,
     apiKeys: apiKeyStatuses,
   };
 }
@@ -275,5 +295,45 @@ export async function saveWatermarkPosition(
     success: true,
     message: "Watermark position updated.",
     watermarkPosition: parsed.data,
+  };
+}
+
+export async function saveBrandProfile(
+  input: z.infer<typeof saveBrandProfileSchema>,
+): Promise<{ success: boolean; message: string }> {
+  const parsed = saveBrandProfileSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid brand profile.",
+    };
+  }
+
+  const user = await requireCurrentUser();
+
+  await prisma.userSettings.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      companyName: normalizeBrandProfileField(parsed.data.companyName),
+      businessDescription: normalizeBrandProfileField(parsed.data.businessDescription),
+      websiteUrl: normalizeBrandProfileField(parsed.data.websiteUrl),
+      socialHandle: normalizeBrandProfileField(parsed.data.socialHandle),
+    },
+    update: {
+      companyName: normalizeBrandProfileField(parsed.data.companyName),
+      businessDescription: normalizeBrandProfileField(parsed.data.businessDescription),
+      websiteUrl: normalizeBrandProfileField(parsed.data.websiteUrl),
+      socialHandle: normalizeBrandProfileField(parsed.data.socialHandle),
+    },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: "Brand profile saved. Future generations will use this context.",
   };
 }

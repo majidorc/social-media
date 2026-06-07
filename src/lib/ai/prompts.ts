@@ -1,5 +1,6 @@
 import type { Platform } from "@prisma/client";
 import { PLATFORM_OPTIONS } from "@/lib/constants";
+import { buildBrandContextSystemRule, type BrandProfileContext } from "@/lib/brand-profile";
 import type { GenerationInput } from "@/types";
 
 export interface ParsedVideoMetadata {
@@ -69,9 +70,10 @@ export function buildGenerationPrompt(
   options: {
     includeVisualPrompt: boolean;
     includeVideoMetadata: boolean;
+    brandProfile?: BrandProfileContext | null;
   },
 ): { system: string; user: string } {
-  const { includeVisualPrompt, includeVideoMetadata } = options;
+  const { includeVisualPrompt, includeVideoMetadata, brandProfile } = options;
 
   const platformInstructions = input.platforms
     .map((platform) => {
@@ -100,6 +102,9 @@ export function buildGenerationPrompt(
     : "";
 
   const jsonShape = buildJsonShape(includeVisualPrompt, includeVideoMetadata);
+  const brandContextRule = brandProfile
+    ? buildBrandContextSystemRule(brandProfile)
+    : "";
 
   const system = `You are an expert social media content strategist. Generate platform-specific content based on the user's inputs.
 
@@ -108,7 +113,7 @@ Rules:
 - Each platform gets unique, tailored copy (not copy-paste).
 - Twitter/X must respect character limits.
 - Instagram should include a hook and optional CapCut/video script notes.
-- LinkedIn should use a professional, thought-leadership tone.${visualPromptRule}${videoMetadataRule}
+- LinkedIn should use a professional, thought-leadership tone.${visualPromptRule}${videoMetadataRule}${brandContextRule}
 
 JSON shape:
 ${jsonShape}

@@ -51,6 +51,10 @@ export interface SettingsResponse {
   defaultAiModel: string;
   watermarkLogoUrl: string | null;
   watermarkPosition: WatermarkPosition;
+  companyName: string | null;
+  businessDescription: string | null;
+  websiteUrl: string | null;
+  socialHandle: string | null;
   apiKeys: ApiKeyStatus[];
 }
 
@@ -120,3 +124,4 @@ export interface ScheduleWorkspaceResult {
 }
 
 export type { LiveModelCatalog, LiveModelOption } from "@/lib/ai/model-types";
+export type { BrandProfileContext } from "@/lib/brand-profile";

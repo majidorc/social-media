@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSettings, saveApiKeys, saveDefaultModel } from "@/lib/actions/settings";
+import {
+  getSettings,
+  saveApiKeys,
+  saveBrandProfile,
+  saveDefaultModel,
+} from "@/lib/actions/settings";
 import { textModelSchema } from "@/lib/ai/models";
 
 const saveKeysSchema = z.object({
@@ -11,6 +16,21 @@ const saveKeysSchema = z.object({
 
 const saveModelSchema = z.object({
   defaultAiModel: textModelSchema,
+});
+
+const optionalWebsiteUrl = z
+  .string()
+  .trim()
+  .optional()
+  .refine((value) => !value || z.string().url().safeParse(value).success, {
+    message: "Enter a valid website URL.",
+  });
+
+const saveBrandProfileSchema = z.object({
+  companyName: z.string().trim().max(200).optional(),
+  businessDescription: z.string().trim().max(5000).optional(),
+  websiteUrl: optionalWebsiteUrl,
+  socialHandle: z.string().trim().max(100).optional(),
 });
 
 export async function GET() {
@@ -43,6 +63,20 @@ export async function PUT(request: Request) {
       }
 
       const result = await saveDefaultModel(parsed.data.defaultAiModel);
+      return NextResponse.json(result);
+    }
+
+    if (action === "brand-profile") {
+      const parsed = saveBrandProfileSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: "Invalid brand profile payload", details: parsed.error.flatten() },
+          { status: 400 },
+        );
+      }
+
+      const result = await saveBrandProfile(parsed.data);
       return NextResponse.json(result);
     }
 

@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { KeyRound, ExternalLink, Save, ShieldCheck, ImageIcon, Trash2, Upload } from "lucide-react";
+import { Textarea } from "@/components/ui/Textarea";
+import { KeyRound, ExternalLink, Save, ShieldCheck, ImageIcon, Trash2, Upload, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -58,6 +59,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     initialSettings.watermarkPosition,
   );
   const watermarkInputRef = useRef<HTMLInputElement>(null);
+  const [companyName, setCompanyName] = useState(initialSettings.companyName ?? "");
+  const [businessDescription, setBusinessDescription] = useState(
+    initialSettings.businessDescription ?? "",
+  );
+  const [websiteUrl, setWebsiteUrl] = useState(initialSettings.websiteUrl ?? "");
+  const [socialHandle, setSocialHandle] = useState(initialSettings.socialHandle ?? "");
 
   const configuredKeys = Object.fromEntries(
     initialSettings.apiKeys.map((item) => [item.provider, item]),
@@ -78,6 +85,18 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   useEffect(() => {
     setWatermarkPosition(initialSettings.watermarkPosition);
   }, [initialSettings.watermarkPosition]);
+
+  useEffect(() => {
+    setCompanyName(initialSettings.companyName ?? "");
+    setBusinessDescription(initialSettings.businessDescription ?? "");
+    setWebsiteUrl(initialSettings.websiteUrl ?? "");
+    setSocialHandle(initialSettings.socialHandle ?? "");
+  }, [
+    initialSettings.businessDescription,
+    initialSettings.companyName,
+    initialSettings.socialHandle,
+    initialSettings.websiteUrl,
+  ]);
 
   const handleSaveKeys = () => {
     startTransition(async () => {
@@ -260,6 +279,42 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     });
   };
 
+  const handleSaveBrandProfile = () => {
+    startTransition(async () => {
+      setMessage(null);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/settings?action=brand-profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            companyName,
+            businessDescription,
+            websiteUrl,
+            socialHandle,
+          }),
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to save brand profile.");
+          return;
+        }
+
+        setMessage(result.message ?? "Brand profile saved.");
+        router.refresh();
+      } catch {
+        setError("Failed to save brand profile.");
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -406,6 +461,64 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             default model from the live synced list.
           </p>
         )}
+      </Card>
+
+      <Card
+        title="Brand Profile Context"
+        description="Save your company details so generated copy uses real URLs and handles instead of generic placeholders."
+      >
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-violet-500/20 bg-accent-soft px-4 py-3 text-sm leading-relaxed text-accent-text">
+          <Building2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            This context is injected into every generation prompt. CTAs will prefer
+            your website and social handle over phrases like &quot;link in bio&quot;.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          <Input
+            label="Company name"
+            placeholder="Acme Studio"
+            value={companyName}
+            onChange={(event) => setCompanyName(event.target.value)}
+          />
+
+          <Input
+            label="Website URL"
+            type="url"
+            placeholder="https://example.com"
+            value={websiteUrl}
+            onChange={(event) => setWebsiteUrl(event.target.value)}
+            hint="Used in calls to action when a direct link fits the platform."
+          />
+
+          <Input
+            label="Social media handle"
+            placeholder="@username"
+            value={socialHandle}
+            onChange={(event) => setSocialHandle(event.target.value)}
+            hint="Include the @ prefix if you use one."
+          />
+
+          <Textarea
+            label="Business description / What you do"
+            placeholder="Describe your company, products, audience, tone of voice, and key differentiators..."
+            value={businessDescription}
+            onChange={(event) => setBusinessDescription(event.target.value)}
+            hint="Helps the AI write on-brand copy tailored to your business."
+          />
+        </div>
+
+        <div className="mt-6">
+          <Button
+            type="button"
+            onClick={handleSaveBrandProfile}
+            disabled={isPending}
+          >
+            <Save className="h-4 w-4" />
+            Save brand profile
+          </Button>
+        </div>
       </Card>
 
       <Card
