@@ -21,7 +21,7 @@ export function PlatformSelector({ selected, onChange }: PlatformSelectorProps) 
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-xs leading-relaxed text-violet-200/80">
+      <div className="rounded-xl border border-violet-500/20 bg-accent-soft px-4 py-3 text-xs leading-relaxed text-accent-text">
         Select multiple platforms to receive tailored outputs — e.g. Twitter
         respects character limits, Instagram includes hooks and CapCut scripts.
       </div>

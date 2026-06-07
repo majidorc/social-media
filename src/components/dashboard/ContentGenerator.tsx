@@ -264,7 +264,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
       </header>
 
       {isLoadingHistory ? (
-        <div className="flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-sm text-violet-200">
+        <div className="flex items-center gap-2 rounded-xl border border-violet-500/20 bg-accent-soft px-4 py-3 text-sm text-accent-text">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading saved generation...
         </div>

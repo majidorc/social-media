@@ -49,6 +49,7 @@ export interface ApiKeyStatus {
 
 export interface SettingsResponse {
   defaultAiModel: string;
+  watermarkLogoUrl: string | null;
   apiKeys: ApiKeyStatus[];
 }
 

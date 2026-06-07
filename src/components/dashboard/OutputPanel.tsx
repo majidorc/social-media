@@ -214,8 +214,8 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                 className={cn(
                   "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
                   activeTab === "platforms"
-                    ? "border-violet-500 text-violet-200"
-                    : "border-transparent text-muted hover:text-zinc-200",
+                    ? "border-violet-500 text-accent-text"
+                    : "border-transparent text-muted hover:text-foreground",
                 )}
               >
                 Platforms
@@ -227,8 +227,8 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   className={cn(
                     "inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
                     activeTab === "video"
-                      ? "border-violet-500 text-violet-200"
-                      : "border-transparent text-muted hover:text-zinc-200",
+                      ? "border-violet-500 text-accent-text"
+                      : "border-transparent text-muted hover:text-foreground",
                   )}
                 >
                   <Video className="h-3.5 w-3.5" />

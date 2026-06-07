@@ -16,6 +16,7 @@ import {
   callOpenAI,
   callVideoOrTtsAPI,
 } from "@/lib/ai/providers";
+import { applyWatermarkIfConfigured } from "@/lib/image/watermark";
 import type { GenerationInput, GenerationOutputs } from "@/types";
 
 export { MissingApiKeyError };
@@ -83,6 +84,7 @@ export async function generateContentWithVisuals(
   input: GenerationInput,
   textModel: string,
   imageModel?: string,
+  watermarkLogoUrl?: string | null,
 ): Promise<GenerationOutputs> {
   const blendedPrompt = buildBlendedPrompt(input);
   const includeVisualPrompt = Boolean(imageModel);
@@ -111,11 +113,18 @@ export async function generateContentWithVisuals(
       buildFallbackImagePrompt(input, blendedPrompt);
 
     const visuals = await callImageModel(imageModel, imagePrompt);
+    const watermarkedImageUrl = await applyWatermarkIfConfigured(
+      visuals.imageUrl,
+      watermarkLogoUrl,
+    );
 
     result = {
       ...result,
       visualImagePrompt: imagePrompt,
-      visuals,
+      visuals: {
+        ...visuals,
+        imageUrl: watermarkedImageUrl,
+      },
     };
   }
 

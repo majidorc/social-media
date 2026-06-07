@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { KeyRound, ExternalLink, Save, ShieldCheck } from "lucide-react";
+import { KeyRound, ExternalLink, Save, ShieldCheck, ImageIcon, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 interface SettingsFormProps {
   initialSettings: SettingsResponse;
@@ -44,6 +44,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [watermarkLogoUrl, setWatermarkLogoUrl] = useState<string | null>(
+    initialSettings.watermarkLogoUrl,
+  );
+  const [watermarkFileName, setWatermarkFileName] = useState<string | null>(null);
+  const watermarkInputRef = useRef<HTMLInputElement>(null);
 
   const configuredKeys = Object.fromEntries(
     initialSettings.apiKeys.map((item) => [item.provider, item]),
@@ -56,6 +61,10 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     const values = textModels.map((model) => model.value);
     setDefaultModel(pickDefaultModel(initialSettings, values));
   }, [initialSettings, textModels]);
+
+  useEffect(() => {
+    setWatermarkLogoUrl(initialSettings.watermarkLogoUrl);
+  }, [initialSettings.watermarkLogoUrl]);
 
   const handleSaveKeys = () => {
     startTransition(async () => {
@@ -127,11 +136,86 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     });
   };
 
+  const handleUploadWatermark = (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    startTransition(async () => {
+      setMessage(null);
+      setError(null);
+
+      try {
+        const formData = new FormData();
+        formData.append("logo", file);
+
+        const response = await fetch("/api/settings/watermark", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+          watermarkLogoUrl?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to save brand logo.");
+          return;
+        }
+
+        setWatermarkLogoUrl(result.watermarkLogoUrl ?? null);
+        setWatermarkFileName(file.name);
+        setMessage(result.message ?? "Brand logo saved.");
+        router.refresh();
+      } catch {
+        setError("Failed to save brand logo.");
+      } finally {
+        if (watermarkInputRef.current) {
+          watermarkInputRef.current.value = "";
+        }
+      }
+    });
+  };
+
+  const handleRemoveWatermark = () => {
+    startTransition(async () => {
+      setMessage(null);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/settings/watermark", {
+          method: "DELETE",
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to remove brand logo.");
+          return;
+        }
+
+        setWatermarkLogoUrl(null);
+        setWatermarkFileName(null);
+        setMessage(result.message ?? "Brand logo removed.");
+        router.refresh();
+      } catch {
+        setError("Failed to remove brand logo.");
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
         <p className="text-sm font-medium text-accent-text">Settings</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           API keys & model preferences
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-muted">
@@ -172,7 +256,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             return (
               <div
                 key={provider}
-                className="rounded-xl border border-border bg-zinc-950/50 p-4"
+                className="rounded-xl border border-border bg-card-muted p-4"
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <KeyRound className="h-4 w-4 text-accent-text" />
@@ -186,7 +270,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                     href={apiKeyHelpUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-auto inline-flex items-center gap-1 text-xs text-muted underline-offset-2 transition-colors hover:text-zinc-200 hover:underline"
+                    className="ml-auto inline-flex items-center gap-1 text-xs text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
                   >
                     How to get API key?
                     <ExternalLink className="h-3 w-3" />
@@ -273,6 +357,71 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             default model from the live synced list.
           </p>
         )}
+      </Card>
+
+      <Card
+        title="Brand watermark"
+        description="Upload a transparent PNG logo. It is stamped on the bottom-right of every generated image."
+      >
+        <div className="mb-5 rounded-xl border border-violet-500/20 bg-accent-soft px-4 py-3 text-sm leading-relaxed text-accent-text">
+          Use a PNG with a transparent background. Recommended size: 512×512 px or smaller.
+          If upload fails, generation still works without a watermark.
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card-muted px-4 py-8 text-center transition-colors hover:border-violet-500/40 hover:bg-card">
+            <Upload className="mb-3 h-8 w-8 text-muted" />
+            <span className="text-sm font-medium text-foreground">
+              Drop a PNG logo here or click to browse
+            </span>
+            <span className="mt-1 text-xs text-muted">
+              {watermarkFileName ?? "PNG only · max 2 MB"}
+            </span>
+            <input
+              ref={watermarkInputRef}
+              type="file"
+              accept="image/png"
+              className="sr-only"
+              disabled={isPending}
+              onChange={(event) =>
+                handleUploadWatermark(event.target.files?.[0] ?? null)
+              }
+            />
+          </label>
+
+          <div className="flex flex-col rounded-xl border border-border bg-card-muted p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-accent-text" />
+              <p className="text-sm font-medium text-foreground">Preview</p>
+            </div>
+            <div className="relative flex min-h-[140px] flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-[linear-gradient(45deg,var(--border)_25%,transparent_25%,transparent_75%,var(--border)_75%,var(--border)),linear-gradient(45deg,var(--border)_25%,transparent_25%,transparent_75%,var(--border)_75%,var(--border))] bg-[length:16px_16px] bg-[position:0_0,8px_8px]">
+              {watermarkLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={watermarkLogoUrl}
+                  alt="Brand watermark preview"
+                  className="max-h-28 max-w-full object-contain p-3"
+                />
+              ) : (
+                <p className="px-4 text-center text-xs text-muted">
+                  No logo uploaded yet
+                </p>
+              )}
+            </div>
+            {watermarkLogoUrl ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="mt-4 w-full"
+                onClick={handleRemoveWatermark}
+                disabled={isPending}
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove logo
+              </Button>
+            ) : null}
+          </div>
+        </div>
       </Card>
     </div>
   );

@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { AiProvider } from "@prisma/client";
+import sharp from "sharp";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { decryptApiKey, encryptApiKey, maskApiKey } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,8 @@ import {
 } from "@/lib/ai/available-models";
 import { findModelOption, textModelSchema } from "@/lib/ai/models";
 import type { ApiKeyStatus, SettingsResponse } from "@/types";
+
+const MAX_WATERMARK_BYTES = 2 * 1024 * 1024;
 
 const saveApiKeysSchema = z.object({
   openai: z.string().optional(),
@@ -54,6 +57,7 @@ export async function getSettings(): Promise<SettingsResponse> {
 
   return {
     defaultAiModel: settings.defaultAiModel,
+    watermarkLogoUrl: settings.watermarkLogoUrl,
     apiKeys: apiKeyStatuses,
   };
 }
@@ -158,4 +162,76 @@ export async function getDefaultModel(): Promise<string | null> {
   const catalog = await getLiveModelCatalog(user.id, settings.apiKeys);
 
   return resolveDefaultModel(settings.defaultAiModel, catalog.textModels);
+}
+
+async function validateWatermarkBuffer(buffer: Buffer): Promise<void> {
+  if (buffer.length === 0) {
+    throw new Error("Logo file is empty.");
+  }
+
+  if (buffer.length > MAX_WATERMARK_BYTES) {
+    throw new Error("Logo must be 2 MB or smaller.");
+  }
+
+  const metadata = await sharp(buffer).metadata();
+
+  if (metadata.format !== "png") {
+    throw new Error("Upload a transparent PNG logo.");
+  }
+}
+
+export async function saveWatermarkLogo(
+  buffer: Buffer,
+): Promise<{ success: boolean; message: string; watermarkLogoUrl?: string }> {
+  try {
+    await validateWatermarkBuffer(buffer);
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Invalid logo file.",
+    };
+  }
+
+  const user = await requireCurrentUser();
+  const watermarkLogoUrl = `data:image/png;base64,${buffer.toString("base64")}`;
+
+  await prisma.userSettings.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      watermarkLogoUrl,
+    },
+    update: {
+      watermarkLogoUrl,
+    },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: "Brand logo saved. New images will include this watermark.",
+    watermarkLogoUrl,
+  };
+}
+
+export async function removeWatermarkLogo(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const user = await requireCurrentUser();
+
+  await prisma.userSettings.updateMany({
+    where: { userId: user.id },
+    data: { watermarkLogoUrl: null },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: "Brand logo removed.",
+  };
 }
