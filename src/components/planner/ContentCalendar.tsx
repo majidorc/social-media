@@ -8,7 +8,7 @@ import {
   getCalendarCells,
   scheduledDateKey,
 } from "@/lib/planner-calendar";
-import { truncatePlannerTitle } from "@/lib/workspace-planner";
+import { getPlannerItemDisplayTitle } from "@/lib/workspace-planner";
 import type { PlannerMonthResponse, ScheduledWorkspaceItem } from "@/types";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -233,9 +233,12 @@ export function ContentCalendar({
                         onClick={() => setSelectedItem(item)}
                         className="w-full rounded-lg border border-border bg-card px-1.5 py-1.5 text-left transition-colors hover:border-violet-500/30 hover:bg-accent-soft/40 sm:px-2"
                       >
-                        <p className="line-clamp-2 text-[10px] font-medium leading-snug text-foreground sm:text-xs">
-                          {truncatePlannerTitle(item.idea)}
-                        </p>
+                        <span
+                          className="block max-w-full truncate text-xs font-medium text-foreground"
+                          title={getPlannerItemDisplayTitle(item, 80)}
+                        >
+                          {getPlannerItemDisplayTitle(item, 20)}
+                        </span>
                         <PlatformBadges
                           platforms={item.platforms}
                           className="mt-1"
