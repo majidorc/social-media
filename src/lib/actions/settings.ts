@@ -1,7 +1,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { AiProvider } from "@prisma/client";
+import type { AiProvider, WatermarkPosition } from "@prisma/client";
 import sharp from "sharp";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { decryptApiKey, encryptApiKey, maskApiKey } from "@/lib/encryption";
@@ -13,6 +13,7 @@ import {
   resolveDefaultModel,
 } from "@/lib/ai/available-models";
 import { findModelOption, textModelSchema } from "@/lib/ai/models";
+import { resolveWatermarkPosition } from "@/lib/watermark-position";
 import type { ApiKeyStatus, SettingsResponse } from "@/types";
 
 const MAX_WATERMARK_BYTES = 2 * 1024 * 1024;
@@ -26,6 +27,14 @@ const saveApiKeysSchema = z.object({
 const saveDefaultModelSchema = z.object({
   defaultAiModel: textModelSchema,
 });
+
+const saveWatermarkPositionSchema = z.enum([
+  "TOP_LEFT",
+  "TOP_RIGHT",
+  "BOTTOM_LEFT",
+  "BOTTOM_RIGHT",
+  "CENTER",
+]);
 
 export async function getSettings(): Promise<SettingsResponse> {
   const user = await requireCurrentUser();
@@ -58,6 +67,7 @@ export async function getSettings(): Promise<SettingsResponse> {
   return {
     defaultAiModel: settings.defaultAiModel,
     watermarkLogoUrl: settings.watermarkLogoUrl,
+    watermarkPosition: resolveWatermarkPosition(settings.watermarkPosition),
     apiKeys: apiKeyStatuses,
   };
 }
@@ -233,5 +243,37 @@ export async function removeWatermarkLogo(): Promise<{
   return {
     success: true,
     message: "Brand logo removed.",
+  };
+}
+
+export async function saveWatermarkPosition(
+  watermarkPosition: WatermarkPosition,
+): Promise<{ success: boolean; message: string; watermarkPosition?: WatermarkPosition }> {
+  const parsed = saveWatermarkPositionSchema.safeParse(watermarkPosition);
+
+  if (!parsed.success) {
+    return { success: false, message: "Invalid watermark position." };
+  }
+
+  const user = await requireCurrentUser();
+
+  await prisma.userSettings.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      watermarkPosition: parsed.data,
+    },
+    update: {
+      watermarkPosition: parsed.data,
+    },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: "Watermark position updated.",
+    watermarkPosition: parsed.data,
   };
 }

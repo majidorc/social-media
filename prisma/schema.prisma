@@ -22,6 +22,14 @@ enum Platform {
   FACEBOOK
 }
 
+enum WatermarkPosition {
+  TOP_LEFT
+  TOP_RIGHT
+  BOTTOM_LEFT
+  BOTTOM_RIGHT
+  CENTER
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -77,10 +85,11 @@ model UserSettings {
   id                String   @id @default(cuid())
   userId            String   @unique
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultAiModel    String   @default("gpt-4o")
-  watermarkLogoUrl  String?  @db.Text
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  defaultAiModel     String             @default("gpt-4o")
+  watermarkLogoUrl   String?            @db.Text
+  watermarkPosition  WatermarkPosition  @default(BOTTOM_RIGHT)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 }
 
 model ApiKey {

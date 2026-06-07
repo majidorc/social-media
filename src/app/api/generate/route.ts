@@ -136,6 +136,7 @@ export async function POST(request: Request) {
       textModel,
       imageModel,
       settings.watermarkLogoUrl,
+      settings.watermarkPosition,
     );
 
     const workspace = await prisma.contentWorkspace.create({

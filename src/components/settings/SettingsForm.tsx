@@ -2,8 +2,14 @@
 
 import { formatModelLabel } from "@/lib/ai/models";
 import { API_KEY_PROVIDERS } from "@/lib/constants";
+import {
+  WATERMARK_POSITION_OPTIONS,
+  watermarkPreviewPositionClass,
+} from "@/lib/watermark-position";
+import { cn } from "@/lib/utils";
 import { useLiveModels } from "@/hooks/useLiveModels";
 import type { SettingsResponse } from "@/types";
+import type { WatermarkPosition } from "@/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -48,6 +54,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     initialSettings.watermarkLogoUrl,
   );
   const [watermarkFileName, setWatermarkFileName] = useState<string | null>(null);
+  const [watermarkPosition, setWatermarkPosition] = useState<WatermarkPosition>(
+    initialSettings.watermarkPosition,
+  );
   const watermarkInputRef = useRef<HTMLInputElement>(null);
 
   const configuredKeys = Object.fromEntries(
@@ -65,6 +74,10 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   useEffect(() => {
     setWatermarkLogoUrl(initialSettings.watermarkLogoUrl);
   }, [initialSettings.watermarkLogoUrl]);
+
+  useEffect(() => {
+    setWatermarkPosition(initialSettings.watermarkPosition);
+  }, [initialSettings.watermarkPosition]);
 
   const handleSaveKeys = () => {
     startTransition(async () => {
@@ -207,6 +220,42 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         router.refresh();
       } catch {
         setError("Failed to remove brand logo.");
+      }
+    });
+  };
+
+  const handleSaveWatermarkPosition = () => {
+    startTransition(async () => {
+      setMessage(null);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/settings/watermark", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ watermarkPosition }),
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+          watermarkPosition?: WatermarkPosition;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to save watermark position.");
+          return;
+        }
+
+        if (result.watermarkPosition) {
+          setWatermarkPosition(result.watermarkPosition);
+        }
+
+        setMessage(result.message ?? "Watermark position updated.");
+        router.refresh();
+      } catch {
+        setError("Failed to save watermark position.");
       }
     });
   };
@@ -361,7 +410,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
       <Card
         title="Brand watermark"
-        description="Upload a transparent PNG logo. It is stamped on the bottom-right of every generated image."
+        description="Upload a transparent PNG logo and choose where it appears on generated images."
       >
         <div className="mb-5 rounded-xl border border-violet-500/20 bg-accent-soft px-4 py-3 text-sm leading-relaxed text-accent-text">
           Use a PNG with a transparent background. Recommended size: 512×512 px or smaller.
@@ -400,7 +449,10 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 <img
                   src={watermarkLogoUrl}
                   alt="Brand watermark preview"
-                  className="max-h-28 max-w-full object-contain p-3"
+                  className={cn(
+                    "absolute max-h-10 max-w-[40%] object-contain",
+                    watermarkPreviewPositionClass(watermarkPosition),
+                  )}
                 />
               ) : (
                 <p className="px-4 text-center text-xs text-muted">
@@ -421,6 +473,32 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               </Button>
             ) : null}
           </div>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <Select
+              label="Watermark position"
+              value={watermarkPosition}
+              onChange={(event) =>
+                setWatermarkPosition(event.target.value as WatermarkPosition)
+              }
+              options={WATERMARK_POSITION_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              hint="Corner positions use 24px padding from the image edge."
+            />
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleSaveWatermarkPosition}
+            disabled={isPending}
+          >
+            <Save className="h-4 w-4" />
+            Save position
+          </Button>
         </div>
       </Card>
     </div>

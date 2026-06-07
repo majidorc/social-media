@@ -18,6 +18,7 @@ import {
 } from "@/lib/ai/providers";
 import { applyWatermarkIfConfigured } from "@/lib/image/watermark";
 import type { GenerationInput, GenerationOutputs } from "@/types";
+import type { WatermarkPosition } from "@prisma/client";
 
 export { MissingApiKeyError };
 
@@ -85,6 +86,7 @@ export async function generateContentWithVisuals(
   textModel: string,
   imageModel?: string,
   watermarkLogoUrl?: string | null,
+  watermarkPosition?: WatermarkPosition | null,
 ): Promise<GenerationOutputs> {
   const blendedPrompt = buildBlendedPrompt(input);
   const includeVisualPrompt = Boolean(imageModel);
@@ -116,6 +118,7 @@ export async function generateContentWithVisuals(
     const watermarkedImageUrl = await applyWatermarkIfConfigured(
       visuals.imageUrl,
       watermarkLogoUrl,
+      { position: watermarkPosition },
     );
 
     result = {

@@ -1,6 +1,11 @@
+import type { WatermarkPosition } from "@prisma/client";
 import sharp from "sharp";
+import {
+  computeWatermarkCoordinates,
+  resolveWatermarkPosition,
+  WATERMARK_CORNER_PADDING_PX,
+} from "@/lib/watermark-position";
 
-const DEFAULT_PADDING_PX = 20;
 const MAX_LOGO_WIDTH_RATIO = 0.2;
 
 const DATA_URL_PATTERN = /^data:([^;]+);base64,(.+)$/;
@@ -25,12 +30,18 @@ export async function loadImageBuffer(source: string): Promise<Buffer> {
   return Buffer.from(await response.arrayBuffer());
 }
 
+export interface ApplyWatermarkOptions {
+  padding?: number;
+  position?: WatermarkPosition | null;
+}
+
 export async function applyWatermark(
   imageUrl: string,
   logoUrl: string,
-  options?: { padding?: number },
+  options?: ApplyWatermarkOptions,
 ): Promise<string> {
-  const padding = options?.padding ?? DEFAULT_PADDING_PX;
+  const padding = options?.padding ?? WATERMARK_CORNER_PADDING_PX;
+  const position = resolveWatermarkPosition(options?.position ?? undefined);
 
   const [imageBuffer, logoBuffer] = await Promise.all([
     loadImageBuffer(imageUrl),
@@ -54,15 +65,21 @@ export async function applyWatermark(
   const logoHeight = logoMeta.height ?? maxLogoWidth;
   const logoPng = await logo.png().toBuffer();
 
-  const left = Math.max(0, imageWidth - logoWidth - padding);
-  const top = Math.max(0, imageHeight - logoHeight - padding);
+  const { left, top } = computeWatermarkCoordinates(
+    position,
+    imageWidth,
+    imageHeight,
+    logoWidth,
+    logoHeight,
+    padding,
+  );
 
   const outputFormat = metadata.format === "jpeg" ? "jpeg" : "png";
   const composited = image.composite([
     {
       input: logoPng,
-      left,
-      top,
+      left: Math.max(0, left),
+      top: Math.max(0, top),
     },
   ]);
 
@@ -76,16 +93,25 @@ export async function applyWatermark(
   return `data:${mimeType};base64,${outputBuffer.toString("base64")}`;
 }
 
+export interface ApplyWatermarkIfConfiguredOptions {
+  position?: WatermarkPosition | null;
+  padding?: number;
+}
+
 export async function applyWatermarkIfConfigured(
   imageUrl: string,
   watermarkLogoUrl: string | null | undefined,
+  options?: ApplyWatermarkIfConfiguredOptions,
 ): Promise<string> {
   if (!watermarkLogoUrl?.trim()) {
     return imageUrl;
   }
 
   try {
-    return await applyWatermark(imageUrl, watermarkLogoUrl);
+    return await applyWatermark(imageUrl, watermarkLogoUrl, {
+      position: options?.position,
+      padding: options?.padding,
+    });
   } catch (error) {
     console.error(
       "[watermark] Failed to apply logo overlay, using raw image:",

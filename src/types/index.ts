@@ -1,6 +1,6 @@
-import type { Platform } from "@prisma/client";
+import type { Platform, WatermarkPosition } from "@prisma/client";
 
-export type { Platform, AiProvider } from "@prisma/client";
+export type { Platform, AiProvider, WatermarkPosition } from "@prisma/client";
 
 export interface PlatformOutput {
   platform: Platform;
@@ -50,6 +50,7 @@ export interface ApiKeyStatus {
 export interface SettingsResponse {
   defaultAiModel: string;
   watermarkLogoUrl: string | null;
+  watermarkPosition: WatermarkPosition;
   apiKeys: ApiKeyStatus[];
 }
 
