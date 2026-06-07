@@ -64,6 +64,7 @@ export interface WorkspaceHistoryItem {
   platforms: Platform[];
   aiModel: string;
   imageModel: string | null;
+  scheduledFor: string | null;
   createdAt: string;
 }
 
@@ -95,6 +96,26 @@ export interface ClearHistoryResponse {
 
 export interface HistoryMutationErrorResponse {
   error: string;
+}
+
+export interface ScheduledWorkspaceItem {
+  id: string;
+  idea: string | null;
+  platforms: Platform[];
+  scheduledFor: string;
+  outputs: GenerationOutputs;
+}
+
+export interface PlannerMonthResponse {
+  year: number;
+  month: number;
+  items: ScheduledWorkspaceItem[];
+}
+
+export interface ScheduleWorkspaceResult {
+  success: boolean;
+  message: string;
+  scheduledFor?: string;
 }
 
 export type { LiveModelCatalog, LiveModelOption } from "@/lib/ai/model-types";

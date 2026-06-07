@@ -22,8 +22,12 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { SchedulePostSection } from "@/components/dashboard/SchedulePostSection";
 
 interface OutputPanelProps {
+  workspaceId: string | null;
+  scheduledFor: string | null;
+  onScheduledChange?: (scheduledFor: string | null) => void;
   outputs: GenerationOutputs | null;
   isLoading: boolean;
   error: string | null;
@@ -31,7 +35,14 @@ interface OutputPanelProps {
 
 type OutputTab = "platforms" | "video";
 
-export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
+export function OutputPanel({
+  workspaceId,
+  scheduledFor,
+  onScheduledChange,
+  outputs,
+  isLoading,
+  error,
+}: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<OutputTab>("platforms");
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
@@ -362,6 +373,12 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
               </div>
             )}
           </div>
+
+          <SchedulePostSection
+            workspaceId={workspaceId}
+            scheduledFor={scheduledFor}
+            onScheduledChange={onScheduledChange}
+          />
         </div>
       )}
     </Card>

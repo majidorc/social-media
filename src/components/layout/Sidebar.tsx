@@ -6,13 +6,14 @@ import { HistoryPanel } from "@/components/layout/HistoryPanel";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { notifyNewGenerationRequest } from "@/lib/generation-history-events";
-import { LayoutDashboard, Plus, Settings, Sparkles, X } from "lucide-react";
+import { CalendarDays, LayoutDashboard, Plus, Settings, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -92,7 +93,7 @@ export function SidebarContent({
       </div>
 
       <nav className="flex flex-col gap-1 px-3 pb-2">
-        {navItems.slice(0, 1).map(({ href, label, icon: Icon }) => {
+        {navItems.slice(0, 2).map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
 
           return (
@@ -120,7 +121,7 @@ export function SidebarContent({
       </Suspense>
 
       <nav className="flex flex-col gap-1 px-3 pb-3">
-        {navItems.slice(1).map(({ href, label, icon: Icon }) => {
+        {navItems.slice(2).map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
 
           return (

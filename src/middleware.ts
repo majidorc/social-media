@@ -41,8 +41,10 @@ export async function middleware(request: NextRequest) {
 
   const isProtected =
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/planner") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/api/generate") ||
+    pathname.startsWith("/api/planner") ||
     pathname.startsWith("/api/download-image") ||
     pathname.startsWith("/api/settings");
 
@@ -88,8 +90,11 @@ export const config = {
     "/",
     "/login",
     "/dashboard/:path*",
+    "/planner/:path*",
     "/settings/:path*",
     "/api/generate/:path*",
+    "/api/planner",
+    "/api/planner/:path*",
     "/api/download-image",
     "/api/settings/:path*",
     "/api/models",

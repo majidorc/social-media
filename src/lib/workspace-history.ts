@@ -15,6 +15,7 @@ type WorkspaceRecord = {
   aiModel: string;
   imageModel: string | null;
   enableVideo: boolean;
+  scheduledFor: Date | null;
   outputs: Prisma.JsonValue;
   createdAt: Date;
 };
@@ -40,7 +41,13 @@ export function parseGenerationOutputs(value: Prisma.JsonValue): GenerationOutpu
 export function toWorkspaceHistoryItem(
   workspace: Pick<
     WorkspaceRecord,
-    "id" | "idea" | "platforms" | "aiModel" | "imageModel" | "createdAt"
+    | "id"
+    | "idea"
+    | "platforms"
+    | "aiModel"
+    | "imageModel"
+    | "scheduledFor"
+    | "createdAt"
   >,
 ): WorkspaceHistoryItem {
   return {
@@ -49,6 +56,7 @@ export function toWorkspaceHistoryItem(
     platforms: workspace.platforms,
     aiModel: workspace.aiModel,
     imageModel: workspace.imageModel,
+    scheduledFor: workspace.scheduledFor?.toISOString() ?? null,
     createdAt: workspace.createdAt.toISOString(),
   };
 }

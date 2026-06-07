@@ -192,6 +192,7 @@ export async function GET() {
         platforms: true,
         aiModel: true,
         imageModel: true,
+        scheduledFor: true,
         createdAt: true,
       },
     });

@@ -41,6 +41,15 @@ export const PLATFORM_OPTIONS: {
   },
 ];
 
+export const PLATFORM_SHORT_LABELS: Record<Platform, string> = {
+  INSTAGRAM: "IG",
+  TWITTER: "X",
+  LINKEDIN: "LI",
+  TIKTOK: "TT",
+  YOUTUBE: "YT",
+  FACEBOOK: "FB",
+};
+
 export const API_KEY_PROVIDERS = [
   {
     provider: "OPENAI" as const,

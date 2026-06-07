@@ -57,6 +57,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInputsExpanded, setIsInputsExpanded] = useState(true);
+  const [scheduledFor, setScheduledFor] = useState<string | null>(null);
 
   const resetDashboardState = useCallback(() => {
     setIdea("");
@@ -72,6 +73,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     setOutputs(null);
     setError(null);
     setIsInputsExpanded(true);
+    setScheduledFor(null);
     loadedWorkspaceRef.current = null;
   }, []);
 
@@ -89,6 +91,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     setOutputs(workspace.outputs);
     setError(null);
     setIsInputsExpanded(false);
+    setScheduledFor(workspace.scheduledFor);
   }, []);
 
   useEffect(() => {
@@ -242,6 +245,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
       const result = data as GenerateResponse;
       setOutputs(result.outputs);
       setIsInputsExpanded(false);
+      setScheduledFor(null);
       loadedWorkspaceRef.current = result.workspaceId;
       router.replace(`/dashboard?workspace=${result.workspaceId}`);
       notifyGenerationHistoryUpdated();
@@ -411,6 +415,9 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
 
         <div className={cn(!isInputsExpanded && "order-1")}>
           <OutputPanel
+            workspaceId={workspaceId}
+            scheduledFor={scheduledFor}
+            onScheduledChange={setScheduledFor}
             outputs={outputs}
             isLoading={isLoading || isLoadingHistory}
             error={error}
