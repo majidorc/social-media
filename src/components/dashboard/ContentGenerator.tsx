@@ -13,6 +13,7 @@ import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
 import { useLiveModels } from "@/hooks/useLiveModels";
 import {
   GENERATION_HISTORY_DELETED_EVENT,
+  GENERATION_NEW_REQUEST_EVENT,
   notifyGenerationHistoryUpdated,
   type GenerationHistoryDeletedDetail,
 } from "@/lib/generation-history-events";
@@ -164,6 +165,18 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     };
   }, [resetDashboardState, router, workspaceId]);
 
+  useEffect(() => {
+    const handleNewRequest = () => {
+      resetDashboardState();
+      router.replace("/dashboard");
+    };
+
+    window.addEventListener(GENERATION_NEW_REQUEST_EVENT, handleNewRequest);
+    return () => {
+      window.removeEventListener(GENERATION_NEW_REQUEST_EVENT, handleNewRequest);
+    };
+  }, [resetDashboardState, router]);
+
   const canGenerate =
     !modelsLoading && (defaultModel !== null || modelOverride !== "");
 
@@ -238,13 +251,13 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium text-violet-400">Content Generator</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">
+    <div className="space-y-4 sm:space-y-6">
+      <header className="space-y-1.5 sm:space-y-2">
+        <p className="text-sm font-medium text-accent-text">Content Generator</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           Create multi-platform content
         </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-zinc-400">
+        <p className="max-w-2xl text-sm leading-relaxed text-muted">
           Every input is optional. Mix and match ideas, media, and links — then
           generate tailored copy and optional AI graphics in one run.
         </p>
@@ -267,8 +280,8 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <div className="space-y-6">
+      <div className="grid gap-4 xl:grid-cols-2 xl:gap-6">
+        <div className="space-y-4 sm:space-y-6">
           <Card
             title="Inputs"
             description="All fields are optional. Provide as much or as little context as you need."
@@ -341,18 +354,18 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
                 value={imageModel}
                 onChange={setImageModel}
               />
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-4 transition-colors hover:border-zinc-700">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-card-muted p-4 transition-colors hover:border-violet-500/30">
                 <input
                   type="checkbox"
                   checked={enableVideo}
                   onChange={(event) => setEnableVideo(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-violet-600 focus:ring-violet-500 focus:ring-offset-0"
+                  className="mt-0.5 h-4 w-4 rounded border-border bg-input text-violet-600 focus:ring-violet-500 focus:ring-offset-0"
                 />
                 <span>
-                  <span className="block text-sm font-medium text-zinc-100">
+                  <span className="block text-sm font-medium text-foreground">
                     Generate Video Script &amp; Asset
                   </span>
-                  <span className="mt-1 block text-xs leading-relaxed text-zinc-500">
+                  <span className="mt-1 block text-xs leading-relaxed text-muted">
                     Adds CapCut-ready scene directions, voiceover copy, and a
                     preview video placeholder alongside your platform posts.
                   </span>

@@ -101,8 +101,8 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
       className="h-full"
     >
       {isLoading ? (
-        <div className="flex min-h-80 flex-col items-center justify-center gap-3 text-zinc-400">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 text-muted sm:min-h-80">
+          <Loader2 className="h-8 w-8 animate-spin text-accent-text" />
           <p className="text-sm">Generating platform copy and media assets...</p>
         </div>
       ) : error ? (
@@ -110,8 +110,8 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
           {error}
         </div>
       ) : !outputs ? (
-        <div className="flex min-h-80 flex-col items-center justify-center gap-3 text-center text-zinc-500">
-          <Sparkles className="h-10 w-10 text-zinc-700" />
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 text-center text-muted sm:min-h-80">
+          <Sparkles className="h-10 w-10 text-muted" />
           <p className="max-w-sm text-sm">
             Add any combination of inputs, pick your platforms, and click
             Generate to preview tailored content and optional media.
@@ -119,21 +119,21 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
         </div>
       ) : (
         <div className="space-y-5">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <div className="rounded-xl border border-border bg-card-muted p-4">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
               Blended prompt
             </p>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {outputs.blendedPrompt}
             </p>
           </div>
 
           {outputs.visuals ? (
-            <article className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/60">
-              <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+            <article className="overflow-hidden rounded-xl border border-border bg-card-muted">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-violet-400" />
-                  <h3 className="text-sm font-semibold text-zinc-100">
+                  <ImageIcon className="h-4 w-4 text-accent-text" />
+                  <h3 className="text-sm font-semibold text-foreground">
                     Generated graphic
                   </h3>
                   {imageModelLabel ? <Badge>{imageModelLabel}</Badge> : null}
@@ -155,7 +155,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   {isDownloadingImage ? "Downloading..." : "Download image"}
                 </Button>
               </div>
-              <div className="relative aspect-square w-full bg-zinc-900">
+              <div className="relative aspect-square w-full bg-card-muted">
                 <Image
                   src={outputs.visuals.imageUrl}
                   alt="AI-generated social graphic"
@@ -167,7 +167,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
               </div>
               <div className="space-y-3 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
                     Image prompt used
                   </p>
                   <button
@@ -178,23 +178,23 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                         setCopiedPrompt,
                       )
                     }
-                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
                   >
                     <Copy className="h-3.5 w-3.5" />
                     {copiedPrompt ? "Copied" : "Copy"}
                   </button>
                 </div>
-                <p className="text-sm leading-relaxed text-zinc-300">
+                <p className="text-sm leading-relaxed text-foreground">
                   {outputs.visuals.promptUsed}
                 </p>
               </div>
             </article>
           ) : outputs.visualImagePrompt ? (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <div className="rounded-xl border border-border bg-card-muted p-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
                 Visual image prompt
               </p>
-              <p className="text-sm leading-relaxed text-zinc-300">
+              <p className="text-sm leading-relaxed text-foreground">
                 {outputs.visualImagePrompt}
               </p>
             </div>
@@ -207,7 +207,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
           ) : null}
 
           <div className="space-y-4">
-            <div className="flex gap-2 border-b border-zinc-800">
+            <div className="flex gap-2 border-b border-border">
               <button
                 type="button"
                 onClick={() => setActiveTab("platforms")}
@@ -215,7 +215,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
                   activeTab === "platforms"
                     ? "border-violet-500 text-violet-200"
-                    : "border-transparent text-zinc-500 hover:text-zinc-200",
+                    : "border-transparent text-muted hover:text-zinc-200",
                 )}
               >
                 Platforms
@@ -228,7 +228,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                     "inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
                     activeTab === "video"
                       ? "border-violet-500 text-violet-200"
-                      : "border-transparent text-zinc-500 hover:text-zinc-200",
+                      : "border-transparent text-muted hover:text-zinc-200",
                   )}
                 >
                   <Video className="h-3.5 w-3.5" />
@@ -238,11 +238,11 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
             </div>
 
             {activeTab === "video" && outputs.video ? (
-              <article className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/60">
-                <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+              <article className="overflow-hidden rounded-xl border border-border bg-card-muted">
+                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Video className="h-4 w-4 text-violet-400" />
-                    <h3 className="text-sm font-semibold text-zinc-100">
+                    <Video className="h-4 w-4 text-accent-text" />
+                    <h3 className="text-sm font-semibold text-foreground">
                       Generated video
                     </h3>
                     <Badge>Preview</Badge>
@@ -268,7 +268,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                     controls
                     playsInline
                     preload="metadata"
-                    className="aspect-video w-full rounded-lg bg-zinc-900"
+                    className="aspect-video w-full rounded-lg bg-card-muted"
                   >
                     Your browser does not support HTML5 video playback.
                   </video>
@@ -276,7 +276,7 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                 <div className="space-y-4 p-4">
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
                         Video script
                       </p>
                       <button
@@ -287,19 +287,19 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                             setCopiedVideoScript,
                           )
                         }
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
                       >
                         <Copy className="h-3.5 w-3.5" />
                         {copiedVideoScript ? "Copied" : "Copy"}
                       </button>
                     </div>
-                    <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-300">
+                    <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
                       {outputs.video.script}
                     </pre>
                   </div>
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
                         Voiceover copy
                       </p>
                       <button
@@ -310,13 +310,13 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                             setCopiedVoiceover,
                           )
                         }
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
                       >
                         <Copy className="h-3.5 w-3.5" />
                         {copiedVoiceover ? "Copied" : "Copy"}
                       </button>
                     </div>
-                    <p className="text-sm leading-relaxed text-zinc-300">
+                    <p className="text-sm leading-relaxed text-foreground">
                       {outputs.video.voiceoverCopy}
                     </p>
                   </div>
@@ -333,11 +333,11 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                   return (
                     <article
                       key={item.platform}
-                      className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4"
+                      className="rounded-xl border border-border bg-card-muted p-4"
                     >
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-semibold text-zinc-100">
+                          <h3 className="text-sm font-semibold text-foreground">
                             {label}
                           </h3>
                           <Badge>{item.platform}</Badge>
@@ -347,13 +347,13 @@ export function OutputPanel({ outputs, isLoading, error }: OutputPanelProps) {
                           onClick={() =>
                             void copyContent(item.platform, item.content)
                           }
-                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
                         >
                           <Copy className="h-3.5 w-3.5" />
                           {copiedPlatform === item.platform ? "Copied" : "Copy"}
                         </button>
                       </div>
-                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-300">
+                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
                         {item.content}
                       </pre>
                     </article>

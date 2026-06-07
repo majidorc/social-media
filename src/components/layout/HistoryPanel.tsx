@@ -25,7 +25,11 @@ interface HistoryToast {
   tone: "success" | "error";
 }
 
-export function HistoryPanel() {
+interface HistoryPanelProps {
+  onNavigate?: () => void;
+}
+
+export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -92,6 +96,7 @@ export function HistoryPanel() {
 
   const handleSelect = (workspaceId: string) => {
     router.push(`/dashboard?workspace=${workspaceId}`);
+    onNavigate?.();
   };
 
   const handleDeleteItem = async (
@@ -200,10 +205,10 @@ export function HistoryPanel() {
   const isMutating = deletingId !== null || isClearingAll;
 
   return (
-    <section className="border-t border-zinc-800 px-3 py-4">
+    <section className="border-t border-border px-3 py-3 sm:py-4">
       <div className="mb-3 flex items-center gap-2 px-1">
-        <History className="h-4 w-4 text-violet-400" />
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+        <History className="h-4 w-4 text-accent-text" />
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
           History
         </h2>
         {!isLoading && history.length > 0 ? (
@@ -211,7 +216,7 @@ export function HistoryPanel() {
             type="button"
             onClick={() => void handleClearAll()}
             disabled={isMutating}
-            className="ml-auto text-[11px] text-zinc-500 transition-colors hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ml-auto text-[11px] text-muted transition-colors hover:text-red-500 dark:hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isClearingAll ? "Clearing..." : "Clear all"}
           </button>
@@ -232,20 +237,20 @@ export function HistoryPanel() {
       ) : null}
 
       {isLoading ? (
-        <div className="flex items-center gap-2 rounded-xl bg-zinc-900/60 px-3 py-4 text-xs text-zinc-500">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-400" />
+        <div className="flex items-center gap-2 rounded-xl bg-card-muted px-3 py-4 text-xs text-muted">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-text" />
           Loading recent generations...
         </div>
       ) : error ? (
-        <p className="rounded-xl bg-zinc-900/60 px-3 py-3 text-xs text-red-300">
+        <p className="rounded-xl bg-card-muted px-3 py-3 text-xs text-red-500 dark:text-red-300">
           {error}
         </p>
       ) : history.length === 0 ? (
-        <p className="rounded-xl bg-zinc-900/60 px-3 py-3 text-xs leading-relaxed text-zinc-500">
+        <p className="rounded-xl bg-card-muted px-3 py-3 text-xs leading-relaxed text-muted">
           No history found. Generated content will appear here for quick recall.
         </p>
       ) : (
-        <ul className="max-h-56 space-y-1 overflow-y-auto pr-1">
+        <ul className="max-h-40 space-y-1 overflow-y-auto pr-1 sm:max-h-56">
           {history.map((item) => {
             const isActive =
               pathname.startsWith("/dashboard") && activeWorkspaceId === item.id;
@@ -257,8 +262,8 @@ export function HistoryPanel() {
                   className={cn(
                     "group flex items-stretch rounded-xl transition-colors",
                     isActive
-                      ? "bg-violet-600/15 ring-1 ring-violet-500/30"
-                      : "hover:bg-zinc-900",
+                      ? "bg-accent-soft ring-1 ring-violet-500/30"
+                      : "hover:bg-card-muted",
                   )}
                 >
                   <button
@@ -270,12 +275,12 @@ export function HistoryPanel() {
                     <p
                       className={cn(
                         "truncate text-sm font-medium",
-                        isActive ? "text-violet-200" : "text-zinc-200",
+                        isActive ? "text-accent-text" : "text-foreground",
                       )}
                     >
                       {truncateLabel(item.idea)}
                     </p>
-                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-zinc-500">
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
                       <Clock3 className="h-3 w-3 shrink-0" />
                       <span>{formatRelativeTime(item.createdAt)}</span>
                       <span aria-hidden="true">·</span>
@@ -288,7 +293,7 @@ export function HistoryPanel() {
                     onClick={(event) => void handleDeleteItem(event, item.id)}
                     disabled={isMutating}
                     className={cn(
-                      "mr-2 inline-flex items-center self-center rounded-lg p-1.5 text-zinc-500 transition-all",
+                      "mr-2 inline-flex items-center self-center rounded-lg p-1.5 text-muted transition-all",
                       "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
                       "hover:bg-red-500/10 hover:text-red-300",
                       "disabled:cursor-not-allowed disabled:opacity-40",

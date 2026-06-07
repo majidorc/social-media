@@ -107,7 +107,7 @@ export function GoogleSignInButton({ authConfigured }: GoogleSignInButtonProps) 
         type="button"
         onClick={handleSignIn}
         disabled={isLoading || !authConfigured}
-        className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-100 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card-muted px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -168,15 +168,15 @@ export function LoginCard({ authConfigured }: LoginCardProps) {
   }, [errorCode, router, searchParams]);
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl shadow-violet-950/20">
+    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl shadow-black/10 sm:p-8 dark:shadow-violet-950/20">
       <div className="mb-8 flex flex-col items-center text-center">
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600/20 text-violet-400">
           <Sparkles className="h-7 w-7" />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Sign in to {APP_NAME}
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+        <p className="mt-2 text-sm leading-relaxed text-muted">
           Use your Google account to access the content generator and settings.
         </p>
       </div>
@@ -203,7 +203,7 @@ export function LoginCard({ authConfigured }: LoginCardProps) {
 
       <GoogleSignInButton authConfigured={authConfigured} />
 
-      <p className="mt-6 text-center text-xs leading-relaxed text-zinc-500">
+      <p className="mt-6 text-center text-xs leading-relaxed text-muted">
         Google is the only sign-in option. Your API keys and generated content
         stay tied to your account.
       </p>

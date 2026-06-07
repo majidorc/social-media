@@ -13,10 +13,10 @@ export default function LoginPage() {
   const authConfigured = isAuthConfigured();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:py-12">
       <Suspense
         fallback={
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 text-center text-sm text-zinc-400">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted">
             Loading sign-in...
           </div>
         }

@@ -20,7 +20,7 @@ export function Textarea({
       {label ? (
         <label
           htmlFor={textareaId}
-          className="block text-sm font-medium text-zinc-300"
+          className="block text-sm font-medium text-foreground"
         >
           {label}
         </label>
@@ -28,12 +28,12 @@ export function Textarea({
       <textarea
         id={textareaId}
         className={cn(
-          "min-h-32 w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900/80 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20",
+          "min-h-28 w-full resize-y rounded-lg border border-border bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 sm:min-h-32",
           className,
         )}
         {...props}
       />
-      {hint ? <p className="text-xs text-zinc-500">{hint}</p> : null}
+      {hint ? <p className="text-xs text-muted">{hint}</p> : null}
     </div>
   );
 }

@@ -130,11 +130,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <p className="text-sm font-medium text-violet-400">Settings</p>
+        <p className="text-sm font-medium text-accent-text">Settings</p>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">
           API keys & model preferences
         </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-zinc-400">
+        <p className="max-w-2xl text-sm leading-relaxed text-muted">
           Add your provider API keys first. Available models are synced live from
           each provider&apos;s API when you open this page or save keys.
         </p>
@@ -172,11 +172,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             return (
               <div
                 key={provider}
-                className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-4"
+                className="rounded-xl border border-border bg-zinc-950/50 p-4"
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-violet-400" />
-                  <h3 className="text-sm font-semibold text-zinc-100">{label}</h3>
+                  <KeyRound className="h-4 w-4 text-accent-text" />
+                  <h3 className="text-sm font-semibold text-foreground">{label}</h3>
                   <Badge variant={status?.configured ? "success" : "warning"}>
                     {status?.configured
                       ? `Configured · ${status.maskedKey}`
@@ -186,13 +186,13 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                     href={apiKeyHelpUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-auto inline-flex items-center gap-1 text-xs text-zinc-400 underline-offset-2 transition-colors hover:text-zinc-200 hover:underline"
+                    className="ml-auto inline-flex items-center gap-1 text-xs text-muted underline-offset-2 transition-colors hover:text-zinc-200 hover:underline"
                   >
                     How to get API key?
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
-                <p className="mb-3 text-xs text-zinc-500">{description}</p>
+                <p className="mb-3 text-xs text-muted">{description}</p>
                 <Input
                   type="password"
                   placeholder={placeholder}
@@ -268,7 +268,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             </Button>
           </div>
         ) : (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted">
             Configure OpenAI, Google Gemini, or Anthropic above — then pick your
             default model from the live synced list.
           </p>

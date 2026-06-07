@@ -17,3 +17,9 @@ export function notifyGenerationHistoryDeleted(
     new CustomEvent(GENERATION_HISTORY_DELETED_EVENT, { detail }),
   );
 }
+
+export const GENERATION_NEW_REQUEST_EVENT = "generation-new-request";
+
+export function notifyNewGenerationRequest() {
+  window.dispatchEvent(new CustomEvent(GENERATION_NEW_REQUEST_EVENT));
+}
