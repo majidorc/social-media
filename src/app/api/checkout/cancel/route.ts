@@ -11,13 +11,20 @@ export async function POST() {
 
     const refundUsd = (result.refundCents / 100).toFixed(2);
 
+    let message = "Your subscription was cancelled.";
+
+    if (result.refundExecuted && result.refundCents > 0) {
+      message = `Your subscription was cancelled. $${refundUsd} has been refunded to your card based on fair proration.`;
+    } else if (result.billingInterval === "MONTHLY") {
+      message =
+        "Your subscription was cancelled. Stripe applied standard monthly proration to your billing account.";
+    }
+
     return NextResponse.json({
       success: true,
       refundAmountCents: result.refundCents,
-      message:
-        result.refundCents > 0
-          ? `Your subscription was cancelled. $${refundUsd} has been refunded to your card based on fair proration.`
-          : "Your subscription was cancelled.",
+      refundExecuted: result.refundExecuted,
+      message,
     });
   } catch (error) {
     console.error("[POST /api/checkout/cancel]", error);

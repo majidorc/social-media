@@ -3,6 +3,7 @@
 import { PlatformBadges } from "@/components/planner/PlatformBadges";
 import { ScheduledPostModal } from "@/components/planner/ScheduledPostModal";
 import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 import { cn } from "@/lib/utils";
 import {
   getCalendarCells,
@@ -156,9 +157,12 @@ export function ContentCalendar({
         </div>
 
         {error ? (
-          <div className="border-b border-border px-4 py-3 text-sm text-red-300 sm:px-5">
+          <Alert
+            variant="error"
+            className="rounded-none border-x-0 border-t-0 border-b border-border sm:px-5"
+          >
             {error}
-          </div>
+          </Alert>
         ) : null}
 
         <div className="relative p-3 sm:p-4">

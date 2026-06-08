@@ -2,6 +2,7 @@
 
 import { GetStartedButton } from "@/components/marketing/GetStartedButton";
 import { useGoogleIdentity } from "@/components/auth/GoogleIdentityProvider";
+import { Alert, AlertCode } from "@/components/ui/Alert";
 import { APP_NAME } from "@/lib/constants";
 import { AlertCircle, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -65,7 +66,7 @@ export function LoginCard({ authConfigured }: LoginCardProps) {
   return (
     <div className="w-full max-w-md rounded-2xl border border-violet-500/20 bg-card/90 p-6 shadow-xl shadow-violet-500/10 backdrop-blur sm:p-8">
       <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/30 to-violet-500/10 text-violet-400">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/30 to-violet-500/10 text-violet-600 dark:text-violet-400">
           <Sparkles className="h-7 w-7" />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -77,29 +78,29 @@ export function LoginCard({ authConfigured }: LoginCardProps) {
       </div>
 
       {!authConfigured ? (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+        <Alert variant="warning" className="mb-4 flex items-start gap-3 p-4">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
             Google sign-in is not configured on the server. Set{" "}
-            <code className="text-amber-100">GOOGLE_CLIENT_ID</code>,{" "}
-            <code className="text-amber-100">GOOGLE_CLIENT_SECRET</code>, and{" "}
-            <code className="text-amber-100">NEXTAUTH_SECRET</code>, then redeploy.
+            <AlertCode>GOOGLE_CLIENT_ID</AlertCode>,{" "}
+            <AlertCode>GOOGLE_CLIENT_SECRET</AlertCode>, and{" "}
+            <AlertCode>NEXTAUTH_SECRET</AlertCode>, then redeploy.
           </p>
-        </div>
+        </Alert>
       ) : null}
 
       {authError ? (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+        <Alert variant="error" className="mb-4 flex items-start gap-3 p-4">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>{authError}</p>
-        </div>
+        </Alert>
       ) : null}
 
       {signInError ? (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+        <Alert variant="error" className="mb-4 flex items-start gap-3 p-4">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>{signInError}</p>
-        </div>
+        </Alert>
       ) : null}
 
       <GetStartedButton className="w-full" />

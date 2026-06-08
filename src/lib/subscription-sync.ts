@@ -17,6 +17,8 @@ import {
   resolveStripeCustomerId,
   resolveStripeSubscriptionId,
   resolveSubscriptionActivationUnix,
+  resolveSubscriptionPaidInvoice,
+  executeStripeRefund,
 } from "@/lib/stripe";
 
 interface UpsertUserPlanInput {
@@ -484,6 +486,22 @@ export async function getActiveSubscriptionForUser(userId: string) {
   return { subscription, settings };
 }
 
+export async function canRestoreSubscriptionForUser(
+  userId: string,
+): Promise<boolean> {
+  const settings = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { plan: true, stripeCustomerId: true },
+  });
+
+  if (!settings || settings.plan !== "FREE" || !settings.stripeCustomerId) {
+    return false;
+  }
+
+  const active = await getActiveSubscriptionForUser(userId);
+  return active !== null;
+}
+
 export async function changeUserSubscription(
   userId: string,
   targetPlan: Extract<Plan, "PRO" | "AGENCY">,
@@ -566,16 +584,25 @@ export async function cancelSubscriptionWithFairRefund(userId: string) {
 
   const billingInterval =
     settings.billingInterval ?? inferBillingIntervalFromSubscription(subscription);
+
+  if (billingInterval === "MONTHLY") {
+    await stripe.subscriptions.cancel(subscription.id, {
+      prorate: true,
+    });
+    await resetUserSubscription(userId);
+
+    return {
+      refundCents: 0,
+      refundExecuted: false,
+      daysUsed: 0,
+      billingInterval,
+    };
+  }
+
   const activationUnix = resolveSubscriptionActivationUnix(subscription);
   const daysUsed = calculateDaysUsedSinceActivation(activationUnix);
-
-  const invoices = await stripe.invoices.list({
-    subscription: subscription.id,
-    status: "paid",
-    limit: 1,
-  });
-  const latestInvoice = invoices.data[0];
-  const amountPaidCents = latestInvoice?.amount_paid ?? 0;
+  const paidInvoice = await resolveSubscriptionPaidInvoice(subscription);
+  const amountPaidCents = paidInvoice?.amountPaidCents ?? 0;
 
   const refundCents = calculateFairRefundCents({
     plan: settings.plan,
@@ -584,39 +611,25 @@ export async function cancelSubscriptionWithFairRefund(userId: string) {
     amountPaidCents,
   });
 
-  if (refundCents > 0 && latestInvoice) {
-    const invoiceWithPayment = latestInvoice as Stripe.Invoice & {
-      payment_intent?: string | Stripe.PaymentIntent | null;
-      charge?: string | Stripe.Charge | null;
-    };
-    const paymentIntent = invoiceWithPayment.payment_intent;
-    const paymentIntentId =
-      typeof paymentIntent === "string" ? paymentIntent : paymentIntent?.id;
-    const chargeId =
-      typeof invoiceWithPayment.charge === "string"
-        ? invoiceWithPayment.charge
-        : invoiceWithPayment.charge?.id;
+  let refundExecuted = false;
 
-    if (paymentIntentId) {
-      await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        amount: refundCents,
-        reason: "requested_by_customer",
-      });
-    } else if (chargeId) {
-      await stripe.refunds.create({
-        charge: chargeId,
-        amount: refundCents,
-        reason: "requested_by_customer",
-      });
+  if (refundCents > 0) {
+    if (!paidInvoice) {
+      throw new Error(
+        "Could not locate a paid invoice to refund. Your subscription was not cancelled — contact support.",
+      );
     }
+
+    await executeStripeRefund(paidInvoice, refundCents);
+    refundExecuted = true;
   }
 
   await stripe.subscriptions.cancel(subscription.id);
   await resetUserSubscription(userId);
 
   return {
-    refundCents,
+    refundCents: refundExecuted ? refundCents : 0,
+    refundExecuted,
     daysUsed,
     billingInterval,
   };

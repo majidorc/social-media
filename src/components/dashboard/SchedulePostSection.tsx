@@ -103,7 +103,7 @@ export function SchedulePostSection({
               calendar.
             </p>
             <Link
-              href="/#pricing"
+              href="/pricing"
               className="mt-3 inline-flex text-xs font-medium text-accent-text underline underline-offset-2"
             >
               View pricing

@@ -1,6 +1,7 @@
 "use client";
 
 import { PlanBadge } from "@/components/subscription/PlanBadge";
+import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Select";
 import { Toast } from "@/components/ui/Toast";
 import { getPlanLabel } from "@/lib/plans";
@@ -118,9 +119,9 @@ export function AdminUsersTable() {
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+      <Alert variant="error" className="rounded-2xl">
         {error}
-      </div>
+      </Alert>
     );
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Alert, type AlertVariant } from "@/components/ui/Alert";
 import { useEffect } from "react";
 
 interface ToastProps {
@@ -9,6 +10,12 @@ interface ToastProps {
   variant?: "success" | "error";
   durationMs?: number;
 }
+
+const toastVariantMap: Record<NonNullable<ToastProps["variant"]>, AlertVariant> =
+  {
+    success: "success",
+    error: "error",
+  };
 
 export function Toast({
   message,
@@ -30,17 +37,15 @@ export function Toast({
   }
 
   return (
-    <div
+    <Alert
       role="status"
       aria-live="polite"
+      variant={toastVariantMap[variant]}
       className={cn(
-        "fixed bottom-4 right-4 z-[100] max-w-sm rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur-sm",
-        variant === "success"
-          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-200"
-          : "border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-300",
+        "fixed bottom-4 right-4 z-[100] max-w-sm shadow-lg backdrop-blur-sm",
       )}
     >
       {message}
-    </div>
+    </Alert>
   );
 }

@@ -13,6 +13,7 @@ import type { WatermarkPosition } from "@/types";
 import { SubscriptionBillingCard } from "@/components/settings/SubscriptionBillingCard";
 import { UpgradeBanner } from "@/components/subscription/UpgradeBanner";
 import { Badge } from "@/components/ui/Badge";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -465,15 +466,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       </header>
 
       {(message || error) && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
-            error
-              ? "border-red-500/30 bg-red-500/10 text-red-300"
-              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-          }`}
-        >
-          {error ?? message}
-        </div>
+        <Alert variant={error ? "error" : "success"}>{error ?? message}</Alert>
       )}
 
       <SubscriptionBillingCard
@@ -482,6 +475,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         planActivatedAt={initialSettings.planActivatedAt}
         planExpiresAt={initialSettings.planExpiresAt}
         hasStripeCustomer={initialSettings.hasStripeCustomer}
+        canRestoreSubscription={initialSettings.canRestoreSubscription}
         onNotice={(text) => {
           setError(null);
           setMessage(text);
@@ -496,13 +490,13 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         title="API keys"
         description="Keys are encrypted before storage. Leave a field blank to keep the existing key."
       >
-        <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-200/80">
+        <Alert variant="info" className="mb-5 flex items-start gap-3 p-4">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
             Keys are encrypted before storage. Model lists are fetched live from
             OpenAI, Anthropic, and Google using your saved credentials.
           </p>
-        </div>
+        </Alert>
 
         <div className="space-y-5">
           {API_KEY_PROVIDERS.map(

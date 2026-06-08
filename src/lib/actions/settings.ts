@@ -22,6 +22,7 @@ import {
   resolveAllowedWatermarkPosition,
   resolveUserPlanFeatures,
 } from "@/lib/subscription";
+import { canRestoreSubscriptionForUser } from "@/lib/subscription-sync";
 import type { ApiKeyStatus, BrandProfileSummary, SettingsResponse } from "@/types";
 
 const MAX_WATERMARK_BYTES = 2 * 1024 * 1024;
@@ -106,6 +107,8 @@ export async function getSettings(): Promise<SettingsResponse> {
 
   const plan = getEffectivePlan(settings);
   const planFeatures = resolveUserPlanFeatures(settings);
+  const canRestoreSubscription =
+    plan === "FREE" ? await canRestoreSubscriptionForUser(user.id) : false;
 
   const apiKeyStatuses: ApiKeyStatus[] = API_KEY_PROVIDERS.map(({ provider }) => {
     const record = apiKeys.find((key) => key.provider === provider);
@@ -129,6 +132,7 @@ export async function getSettings(): Promise<SettingsResponse> {
     planActivatedAt: settings.planActivatedAt?.toISOString() ?? null,
     planExpiresAt: settings.planExpiresAt?.toISOString() ?? null,
     hasStripeCustomer: Boolean(settings.stripeCustomerId),
+    canRestoreSubscription,
     planFeatures,
     watermarkLogoUrl: settings.watermarkLogoUrl,
     watermarkPosition: resolveAllowedWatermarkPosition(

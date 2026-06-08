@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Alert } from "@/components/ui/Alert";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import {
   resolveHistoryItemTitle,
@@ -227,16 +228,12 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
       </div>
 
       {toast ? (
-        <div
-          className={cn(
-            "mb-3 rounded-lg border px-3 py-2 text-[11px]",
-            toast.tone === "success"
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-              : "border-red-500/30 bg-red-500/10 text-red-300",
-          )}
+        <Alert
+          variant={toast.tone === "success" ? "success" : "error"}
+          className="mb-3 rounded-lg px-3 py-2 text-[11px]"
         >
           {toast.message}
-        </div>
+        </Alert>
       ) : null}
 
       {isLoading ? (
@@ -304,7 +301,7 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
                     className={cn(
                       "mr-2 inline-flex items-center self-center rounded-lg p-1.5 text-muted transition-all",
                       "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
-                      "hover:bg-red-500/10 hover:text-red-300",
+                      "hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300",
                       "disabled:cursor-not-allowed disabled:opacity-40",
                     )}
                   >

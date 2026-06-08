@@ -11,6 +11,7 @@ import { ModelOverride } from "@/components/dashboard/ModelOverride";
 import { OutputPanel } from "@/components/dashboard/OutputPanel";
 import { PlatformSelector } from "@/components/dashboard/PlatformSelector";
 import { Accordion, AccordionCollapsedBar } from "@/components/ui/Accordion";
+import { Alert } from "@/components/ui/Alert";
 import { useLiveModels } from "@/hooks/useLiveModels";
 import {
   GENERATION_HISTORY_DELETED_EVENT,
@@ -294,13 +295,16 @@ export function ContentGenerator({
       ) : null}
 
       {!modelsLoading && !defaultModel && textModels.length === 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <Alert variant="warning">
           No AI provider is configured yet.{" "}
-          <Link href="/settings" className="font-medium underline underline-offset-2">
+          <Link
+            href="/settings"
+            className="font-medium text-amber-900 underline underline-offset-2 dark:text-amber-100"
+          >
             Add an API key in Settings
           </Link>{" "}
           to unlock generation.
-        </div>
+        </Alert>
       )}
 
       {!isInputsExpanded ? (

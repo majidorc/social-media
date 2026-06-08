@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/Badge";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import {
@@ -101,9 +102,9 @@ export function OutputPanel({
           <p className="text-sm">Generating platform copy and media assets...</p>
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+        <Alert variant="error" className="p-4">
           {error}
-        </div>
+        </Alert>
       ) : !outputs ? (
         <div className="flex min-h-60 flex-col items-center justify-center gap-3 text-center text-muted sm:min-h-80">
           <Sparkles className="h-10 w-10 text-muted" />
@@ -124,9 +125,9 @@ export function OutputPanel({
           </div>
 
           {downloadError ? (
-            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-300">
+            <Alert variant="error" className="px-4 py-2 text-xs">
               {downloadError}
-            </p>
+            </Alert>
           ) : null}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">

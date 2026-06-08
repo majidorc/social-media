@@ -3,6 +3,7 @@
 import { startCheckout } from "@/lib/start-checkout";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CheckoutButton } from "@/components/subscription/CheckoutButton";
 import { PlanBadge } from "@/components/subscription/PlanBadge";
 import { PLAN_DEFINITIONS } from "@/lib/plans";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ interface SubscriptionBillingCardProps {
   planActivatedAt: string | null;
   planExpiresAt: string | null;
   hasStripeCustomer: boolean;
+  canRestoreSubscription: boolean;
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }
@@ -152,6 +154,7 @@ export function SubscriptionBillingCard({
   planActivatedAt,
   planExpiresAt,
   hasStripeCustomer,
+  canRestoreSubscription,
   onNotice,
   onError,
 }: SubscriptionBillingCardProps) {
@@ -197,7 +200,9 @@ export function SubscriptionBillingCard({
 
   const handleCancelSubscription = async () => {
     const confirmed = window.confirm(
-      "Cancel your subscription and receive an instant fair prorated refund to your card?",
+      isAnnual
+        ? "Cancel your annual subscription? Unused time is recalculated at the standard monthly rate and any remaining balance is refunded to your card."
+        : "Cancel your monthly subscription? Stripe will apply standard proration to your billing account.",
     );
 
     if (!confirmed) {
@@ -338,26 +343,48 @@ export function SubscriptionBillingCard({
           <div className="flex flex-col gap-2 border-t border-border pt-4 sm:items-stretch">
             {plan === "FREE" ? (
               <>
-                <Link
-                  href="/#pricing"
-                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-medium text-white transition-all hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-500/25 sm:w-auto sm:self-start"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Upgrade Plan
-                </Link>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={isRestoringPlan}
-                  onClick={() => void handleRestoreSubscription()}
-                  className="w-full sm:w-auto sm:self-start"
-                >
-                  <RefreshCw
-                    className={cn("h-4 w-4", isRestoringPlan && "animate-spin")}
-                  />
-                  Restore subscription
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <CheckoutButton
+                    planType="PRO"
+                    billingInterval="MONTHLY"
+                    className="h-10 w-full rounded-lg bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-500/25 sm:w-auto"
+                  >
+                    Upgrade to Pro
+                  </CheckoutButton>
+                  <Link
+                    href="/pricing"
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-card-muted sm:w-auto"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Compare all plans
+                  </Link>
+                </div>
+                {canRestoreSubscription ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={isRestoringPlan}
+                      onClick={() => void handleRestoreSubscription()}
+                      className="w-full sm:w-auto sm:self-start"
+                    >
+                      <RefreshCw
+                        className={cn("h-4 w-4", isRestoringPlan && "animate-spin")}
+                      />
+                      Restore subscription
+                    </Button>
+                    <p className="text-xs text-muted">
+                      Use restore only if you paid in Stripe but your plan still
+                      shows Free.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted">
+                    No active Stripe subscription to restore. Choose a plan above to
+                    subscribe again.
+                  </p>
+                )}
               </>
             ) : (
               <>

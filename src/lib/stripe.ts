@@ -176,3 +176,104 @@ export function inferBillingIntervalFromSubscription(
 
   return "MONTHLY";
 }
+
+export interface InvoiceRefundTarget {
+  invoiceId: string;
+  amountPaidCents: number;
+  chargeId: string | null;
+  paymentIntentId: string | null;
+}
+
+type InvoiceWithLegacyPaymentFields = Stripe.Invoice & {
+  payment_intent?: string | Stripe.PaymentIntent | null;
+  charge?: string | Stripe.Charge | null;
+};
+
+function resolveId(
+  value: string | Stripe.PaymentIntent | Stripe.Charge | null | undefined,
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return typeof value === "string" ? value : value.id;
+}
+
+export async function resolveSubscriptionPaidInvoice(
+  subscription: Stripe.Subscription,
+): Promise<InvoiceRefundTarget | null> {
+  const stripe = getStripeClient();
+
+  const invoices = await stripe.invoices.list({
+    subscription: subscription.id,
+    status: "paid",
+    limit: 1,
+  });
+
+  let invoiceId = invoices.data[0]?.id ?? null;
+
+  if (!invoiceId && subscription.latest_invoice) {
+    const latest = subscription.latest_invoice;
+    invoiceId = typeof latest === "string" ? latest : latest.id;
+  }
+
+  if (!invoiceId) {
+    return null;
+  }
+
+  const invoice = (await stripe.invoices.retrieve(invoiceId, {
+    expand: ["payment_intent", "charge"],
+  })) as InvoiceWithLegacyPaymentFields;
+
+  if (invoice.status !== "paid" || invoice.amount_paid <= 0) {
+    return null;
+  }
+
+  const paymentIntentId = resolveId(invoice.payment_intent);
+  let chargeId = resolveId(invoice.charge);
+
+  if (!chargeId && paymentIntentId) {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    chargeId = resolveId(paymentIntent.latest_charge);
+  }
+
+  return {
+    invoiceId,
+    amountPaidCents: invoice.amount_paid,
+    chargeId,
+    paymentIntentId,
+  };
+}
+
+export async function executeStripeRefund(
+  target: InvoiceRefundTarget,
+  amountCents: number,
+): Promise<Stripe.Refund> {
+  if (amountCents <= 0) {
+    throw new Error("Refund amount must be greater than zero.");
+  }
+
+  const stripe = getStripeClient();
+  const refundParams = {
+    amount: amountCents,
+    reason: "requested_by_customer" as const,
+  };
+
+  if (target.paymentIntentId) {
+    return stripe.refunds.create({
+      ...refundParams,
+      payment_intent: target.paymentIntentId,
+    });
+  }
+
+  if (target.chargeId) {
+    return stripe.refunds.create({
+      ...refundParams,
+      charge: target.chargeId,
+    });
+  }
+
+  throw new Error(
+    "Could not locate a refundable payment for this subscription. Contact support if you need a refund.",
+  );
+}

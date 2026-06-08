@@ -77,6 +77,7 @@ export interface SettingsResponse {
   planActivatedAt: string | null;
   planExpiresAt: string | null;
   hasStripeCustomer: boolean;
+  canRestoreSubscription: boolean;
   planFeatures: PlanFeatures;
   watermarkLogoUrl: string | null;
   watermarkPosition: WatermarkPosition;

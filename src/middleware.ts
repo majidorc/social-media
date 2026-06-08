@@ -77,6 +77,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // /pricing is accessible while logged in (/#pricing is not — hash is client-only).
+
   const isAdminRoute =
     pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 
@@ -103,6 +105,7 @@ export const config = {
   matcher: [
     "/",
     "/login",
+    "/pricing",
     "/dashboard/:path*",
     "/planner/:path*",
     "/settings/:path*",
