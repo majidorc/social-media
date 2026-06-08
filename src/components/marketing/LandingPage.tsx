@@ -1,17 +1,15 @@
 import { Suspense } from "react";
 import { GetStartedButton } from "@/components/marketing/GetStartedButton";
 import { PricingSection } from "@/components/marketing/PricingSection";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { Navbar } from "@/components/layout/Navbar";
 import { APP_NAME } from "@/lib/constants";
 import {
   CalendarDays,
   ImageIcon,
   KeyRound,
   Share2,
-  Sparkles,
   Wand2,
 } from "lucide-react";
-import Link from "next/link";
 
 interface LandingPageProps {
   authConfigured: boolean;
@@ -52,35 +50,7 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
         <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-violet-500/10 blur-3xl" />
       </div>
 
-      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-text">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">{APP_NAME}</p>
-              <p className="text-xs text-muted">AI social content studio</p>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
-            <Link
-              href="/login"
-              className="hidden rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card-muted sm:inline-flex"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:from-violet-500 hover:to-violet-400"
-            >
-              Get started
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main>
         <section className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20">
@@ -103,12 +73,11 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
             <div className="mt-8 flex flex-col items-center justify-center gap-4">
               <Suspense
                 fallback={
-                  <div className="h-12 w-full max-w-sm animate-pulse rounded-xl bg-card-muted" />
+                  <div className="h-11 w-full max-w-sm animate-pulse rounded-full bg-card-muted" />
                 }
               >
                 <GetStartedButton
                   authConfigured={authConfigured}
-                  size="large"
                   className="mx-auto"
                 />
               </Suspense>
@@ -152,10 +121,10 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
             <div className="mt-6 flex justify-center">
               <Suspense
                 fallback={
-                  <div className="h-12 w-full max-w-sm animate-pulse rounded-xl bg-card-muted" />
+                  <div className="h-11 w-full max-w-sm animate-pulse rounded-full bg-card-muted" />
                 }
               >
-                <GetStartedButton authConfigured={authConfigured} size="large" />
+                <GetStartedButton authConfigured={authConfigured} />
               </Suspense>
             </div>
           </div>

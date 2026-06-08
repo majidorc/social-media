@@ -1,6 +1,7 @@
 "use client";
 
 import { APP_NAME } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -78,11 +79,13 @@ async function postGoogleSignIn(callbackUrl: string) {
 interface GoogleSignInButtonProps {
   authConfigured: boolean;
   label?: string;
+  className?: string;
 }
 
 export function GoogleSignInButton({
   authConfigured,
   label = "Continue with Google",
+  className,
 }: GoogleSignInButtonProps) {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -111,7 +114,10 @@ export function GoogleSignInButton({
         type="button"
         onClick={handleSignIn}
         disabled={isLoading || !authConfigured}
-        className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card-muted px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-card disabled:cursor-not-allowed disabled:opacity-60"
+        className={cn(
+          "inline-flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card-muted px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-card disabled:cursor-not-allowed disabled:opacity-60",
+          className,
+        )}
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
