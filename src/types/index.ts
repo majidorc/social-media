@@ -175,3 +175,7 @@ export interface AdminUpdateUserResponse {
   message: string;
   user?: AdminUserRecord;
 }
+
+export interface CheckoutSessionResponse {
+  url: string;
+}
