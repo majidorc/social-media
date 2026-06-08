@@ -32,9 +32,9 @@ Short-form modules produce Reels/TikTok storyboards with ready-to-record voiceov
 
 Upload a brand mark and apply it to AI-generated images with coordinate-based placement presets (Free: default corner; Pro/Agency: all corners + center).
 
-### Visual drag-and-drop editorial calendar
+### Editorial calendar & planner
 
-Pro and Agency subscribers schedule generated content on an interactive planner with calendar views and post management.
+Interactive visual editorial calendar and planner to easily view, orchestrate, and schedule future posts across platforms.
 
 ### Multi-brand dashboard switches (Agency)
 
@@ -99,8 +99,8 @@ cp .env.example .env
 | `GOOGLE_CLIENT_ID` | Google OAuth / GSI client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_PRICE_ID_PRO` | Stripe Price ID — Pro **monthly** |
-| `STRIPE_PRICE_ID_AGENCY` | Stripe Price ID — Agency **monthly** |
+| `STRIPE_PRICE_ID_PRO` | Stripe Price ID — Pro **monthly** (`price_1Tg6InLspVzuaPQe2kBB7Cv4`) |
+| `STRIPE_PRICE_ID_AGENCY` | Stripe Price ID — Agency **monthly** (`price_1Tg6KFLspVzuaPQeng2CTi50`) |
 | `STRIPE_PRICE_ID_PRO_ANNUAL` | Stripe Price ID — Pro **annual** ($190/yr) |
 | `STRIPE_PRICE_ID_AGENCY_ANNUAL` | Stripe Price ID — Agency **annual** ($490/yr) |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |

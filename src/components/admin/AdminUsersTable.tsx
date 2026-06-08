@@ -132,11 +132,18 @@ export function AdminUsersTable() {
           <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-card-muted">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted">User</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Joined</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Plan</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-muted">Name</th>
+                <th className="px-4 py-3 text-left font-medium text-muted">Email</th>
+                <th className="px-4 py-3 text-left font-medium text-muted">
+                  Date Joined
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted">
+                  Current Role
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted">
+                  Active Subscription Plan
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted">Manage</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -146,12 +153,14 @@ export function AdminUsersTable() {
                 return (
                   <tr key={user.id} className="bg-card/60">
                     <td className="px-4 py-4 align-top">
-                      <div className="min-w-[12rem]">
-                        <p className="font-medium text-foreground">
-                          {user.name ?? "Unnamed user"}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted">{user.email ?? "No email"}</p>
-                      </div>
+                      <p className="min-w-[8rem] font-medium text-foreground">
+                        {user.name ?? "Unnamed user"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      <p className="min-w-[10rem] text-sm text-muted">
+                        {user.email ?? "No email"}
+                      </p>
                     </td>
                     <td className="px-4 py-4 align-top text-muted">
                       {formatJoinedDate(user.createdAt)}

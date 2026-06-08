@@ -117,7 +117,7 @@ export function PricingSection({ isAuthenticated = false }: PricingSectionProps)
                   <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
                     {"compareAtLabel" in pricing && pricing.compareAtLabel ? (
                       <span
-                        className={cn(compareAtPriceClassName, "pb-1 text-sm")}
+                        className={cn(compareAtPriceClassName, "pb-1")}
                         aria-hidden
                       >
                         {pricing.compareAtLabel}
