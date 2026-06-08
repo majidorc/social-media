@@ -11,5 +11,10 @@ function isAuthConfigured() {
 }
 
 export default function HomePage() {
-  return <LandingPage authConfigured={isAuthConfigured()} />;
+  return (
+    <LandingPage
+      authConfigured={isAuthConfigured()}
+      googleClientId={process.env.GOOGLE_CLIENT_ID ?? ""}
+    />
+  );
 }

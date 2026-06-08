@@ -45,7 +45,7 @@ export function UserMenu({ name, email, image, plan = "FREE" }: UserMenuProps) {
       </div>
       <button
         type="button"
-        onClick={() => signOut({ callbackUrl: "/login" })}
+        onClick={() => signOut({ callbackUrl: "/" })}
         className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-card-muted hover:text-foreground"
       >
         <LogOut className="h-4 w-4" />

@@ -60,11 +60,11 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    const homeUrl = new URL("/", request.url);
+    homeUrl.searchParams.set("callbackUrl", pathname);
     return withOptionalCookieCleanup(
       request,
-      NextResponse.redirect(loginUrl),
+      NextResponse.redirect(homeUrl),
       token,
     );
   }

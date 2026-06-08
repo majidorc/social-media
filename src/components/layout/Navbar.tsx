@@ -8,11 +8,10 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 
 interface NavbarProps {
-  onGetStarted: () => void;
   className?: string;
 }
 
-export function Navbar({ onGetStarted, className }: NavbarProps) {
+export function Navbar({ className }: NavbarProps) {
   return (
     <header
       className={cn(
@@ -33,10 +32,7 @@ export function Navbar({ onGetStarted, className }: NavbarProps) {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
-          <GetStartedButton
-            onClick={onGetStarted}
-            className="w-auto shrink-0"
-          />
+          <GetStartedButton className="shrink-0" />
         </div>
       </div>
     </header>
