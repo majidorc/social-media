@@ -18,9 +18,15 @@ interface AppShellProps {
     image?: string | null;
   } | null;
   plan?: Plan;
+  isAdmin?: boolean;
 }
 
-export function AppShell({ children, user, plan = "FREE" }: AppShellProps) {
+export function AppShell({
+  children,
+  user,
+  plan = "FREE",
+  isAdmin = false,
+}: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -94,6 +100,7 @@ export function AppShell({ children, user, plan = "FREE" }: AppShellProps) {
             <SidebarContent
               user={user}
               plan={plan}
+              isAdmin={isAdmin}
               showCloseButton
               onClose={() => setMobileOpen(false)}
               onNavigate={() => setMobileOpen(false)}
@@ -104,7 +111,7 @@ export function AppShell({ children, user, plan = "FREE" }: AppShellProps) {
 
       <div className="lg:flex lg:min-h-screen">
         <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex">
-          <SidebarContent user={user} plan={plan} />
+          <SidebarContent user={user} plan={plan} isAdmin={isAdmin} />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col lg:pl-64">

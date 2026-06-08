@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ContentGenerator } from "@/components/dashboard/ContentGenerator";
 import { getSettings } from "@/lib/actions/settings";
 import { getDefaultModel } from "@/lib/actions/settings";
+import { isAdminRole } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/get-current-user";
 import { getEffectivePlan } from "@/lib/subscription";
 
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
           : null
       }
       plan={getEffectivePlan(user?.settings)}
+      isAdmin={isAdminRole(user?.role)}
     >
       <Suspense
         fallback={

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { AppShell } from "@/components/layout/AppShell";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { getSettings } from "@/lib/actions/settings";
+import { isAdminRole } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/get-current-user";
 import { getEffectivePlan } from "@/lib/subscription";
 
@@ -20,6 +21,7 @@ export default async function SettingsPage() {
           : null
       }
       plan={getEffectivePlan(user?.settings)}
+      isAdmin={isAdminRole(user?.role)}
     >
       <SettingsForm initialSettings={settings} />
     </AppShell>

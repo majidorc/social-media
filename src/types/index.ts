@@ -1,7 +1,7 @@
-import type { Plan, Platform, WatermarkPosition } from "@prisma/client";
+import type { Plan, Platform, Role, WatermarkPosition } from "@prisma/client";
 import type { PlanFeatures } from "@/lib/plans";
 
-export type { Platform, AiProvider, WatermarkPosition, Plan } from "@prisma/client";
+export type { Platform, AiProvider, WatermarkPosition, Plan, Role } from "@prisma/client";
 export type { PlanFeatures } from "@/lib/plans";
 
 export interface PlatformOutput {
@@ -150,3 +150,28 @@ export interface ScheduleWorkspaceResult {
 
 export type { LiveModelCatalog, LiveModelOption } from "@/lib/ai/model-types";
 export type { BrandProfileContext } from "@/lib/brand-profile";
+
+export interface AdminUserRecord {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: Role;
+  plan: Plan;
+  createdAt: string;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUserRecord[];
+}
+
+export interface AdminUpdateUserRequest {
+  userId: string;
+  role?: Role;
+  plan?: Plan;
+}
+
+export interface AdminUpdateUserResponse {
+  success: boolean;
+  message: string;
+  user?: AdminUserRecord;
+}

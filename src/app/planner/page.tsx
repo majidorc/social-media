@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ContentCalendar } from "@/components/planner/ContentCalendar";
 import { UpgradeBanner } from "@/components/subscription/UpgradeBanner";
 import { getScheduledWorkspacesForMonth } from "@/lib/actions/planner";
+import { isAdminRole } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/get-current-user";
 import { canUsePlanner, getEffectivePlan } from "@/lib/subscription";
 
@@ -27,6 +28,7 @@ export default async function PlannerPage() {
           : null
       }
       plan={getEffectivePlan(user?.settings)}
+      isAdmin={isAdminRole(user?.role)}
     >
       <div className="space-y-4 sm:space-y-6">
         <header className="space-y-1.5 sm:space-y-2">

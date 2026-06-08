@@ -5,6 +5,7 @@ import {
   sessionTokenCookieName,
   useSecureCookies,
 } from "@/lib/auth-cookies";
+import { ensureOwnerAdminRole } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 
 function normalizeAppUrl(url: string | undefined): string {
@@ -88,6 +89,7 @@ export const authOptions: NextAuthOptions = {
 
       if (user.id) {
         await ensureUserSettings(user.id);
+        await ensureOwnerAdminRole(user.id, user.email);
       }
 
       return true;
@@ -127,11 +129,13 @@ export const authOptions: NextAuthOptions = {
     createUser: async ({ user }) => {
       if (user.id) {
         await ensureUserSettings(user.id);
+        await ensureOwnerAdminRole(user.id, user.email);
       }
     },
     linkAccount: async ({ user }) => {
       if (user.id) {
         await ensureUserSettings(user.id);
+        await ensureOwnerAdminRole(user.id, user.email);
       }
     },
   },

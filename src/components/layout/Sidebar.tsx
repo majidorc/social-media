@@ -7,7 +7,16 @@ import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { notifyNewGenerationRequest } from "@/lib/generation-history-events";
 import type { Plan } from "@/types";
-import { CalendarDays, Crown, LayoutDashboard, Plus, Settings, Sparkles, X } from "lucide-react";
+import {
+  CalendarDays,
+  Crown,
+  LayoutDashboard,
+  Plus,
+  Settings,
+  Shield,
+  Sparkles,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense } from "react";
@@ -27,6 +36,7 @@ interface SidebarUser {
 interface SidebarContentProps {
   user?: SidebarUser | null;
   plan?: Plan;
+  isAdmin?: boolean;
   onNavigate?: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
@@ -35,6 +45,7 @@ interface SidebarContentProps {
 export function SidebarContent({
   user,
   plan = "FREE",
+  isAdmin = false,
   onNavigate,
   showCloseButton = false,
   onClose,
@@ -130,6 +141,16 @@ export function SidebarContent({
       </Suspense>
 
       <nav className="flex flex-col gap-1 px-3 pb-3">
+        {isAdmin ? (
+          <Link
+            href="/admin"
+            onClick={onNavigate}
+            className={navLinkClass(pathname.startsWith("/admin"))}
+          >
+            <Shield className="h-4 w-4 shrink-0" />
+            Admin
+          </Link>
+        ) : null}
         {navItems.slice(2).map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
 
