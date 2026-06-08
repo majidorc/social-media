@@ -61,7 +61,7 @@ In-app cancellation via `/api/checkout/cancel` applies transparent proration:
 
 | Billing | Policy |
 | --- | --- |
-| **Monthly** | Refund unused days at the standard monthly daily rate ($19÷30.416 Pro, $49÷30.416 Agency). |
+| **Monthly** | Cancel via Stripe with standard proration (`prorate: true`). |
 | **Annual early cancel** | Days used are charged at the **full monthly daily rate** (not the discounted annual rate). Remaining balance is refunded instantly to the card. |
 
 Annual plans include **two months free** (Pro $190/yr, Agency $490/yr).

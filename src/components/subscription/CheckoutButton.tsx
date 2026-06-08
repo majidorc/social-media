@@ -54,7 +54,9 @@ export function CheckoutButton({
         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {children}
       </button>
-      {error ? <p className="mt-2 text-center text-xs text-red-400">{error}</p> : null}
+      {error ? (
+        <p className="mt-2 text-center text-xs text-red-700 dark:text-red-400">{error}</p>
+      ) : null}
     </div>
   );
 }

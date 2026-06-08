@@ -4,6 +4,11 @@ import { CheckoutButton } from "@/components/subscription/CheckoutButton";
 import { GetStartedButton } from "@/components/marketing/GetStartedButton";
 import { PricingFaq } from "@/components/marketing/PricingFaq";
 import { PLAN_DEFINITIONS, getPlanDisplayPricing } from "@/lib/plans";
+import {
+  annualDisclaimerClassName,
+  compareAtPriceClassName,
+  promoBadgeClassName,
+} from "@/lib/ui-classes";
 import { cn } from "@/lib/utils";
 import type { CheckoutPlanType, MarketingBillingInterval } from "@/types";
 import { Check, Layers } from "lucide-react";
@@ -67,8 +72,8 @@ export function PricingSection({ isAuthenticated = false }: PricingSectionProps)
             </button>
           </div>
           {billingInterval === "ANNUAL" ? (
-            <p className="max-w-sm text-center text-xs leading-relaxed text-muted">
-              Enjoy 2 months free! Early cancellations are safely recalculated at the
+            <p className={annualDisclaimerClassName}>
+              Enjoy 2 months free! Early annual cancellations are safely recalculated at the
               standard monthly rate, and remaining funds are instantly refunded.
             </p>
           ) : null}
@@ -97,7 +102,7 @@ export function PricingSection({ isAuthenticated = false }: PricingSectionProps)
                 ) : null}
 
                 {billingInterval === "ANNUAL" && isCheckoutPlan(plan.id) ? (
-                  <div className="mb-3 inline-flex w-fit rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                  <div className={cn(promoBadgeClassName, "mb-3 w-fit")}>
                     2 months free
                   </div>
                 ) : null}
@@ -109,7 +114,15 @@ export function PricingSection({ isAuthenticated = false }: PricingSectionProps)
                       {plan.name}
                     </h3>
                   </div>
-                  <div className="mt-3 flex items-end gap-2">
+                  <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
+                    {"compareAtLabel" in pricing && pricing.compareAtLabel ? (
+                      <span
+                        className={cn(compareAtPriceClassName, "pb-1 text-sm")}
+                        aria-hidden
+                      >
+                        {pricing.compareAtLabel}
+                      </span>
+                    ) : null}
                     <span className="text-4xl font-bold text-foreground">
                       {pricing.priceLabel}
                     </span>

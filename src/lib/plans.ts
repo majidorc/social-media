@@ -139,6 +139,17 @@ export function getPlanLabel(plan: Plan): string {
 export interface PlanDisplayPricing {
   priceLabel: string;
   priceSubtext: string;
+  /** Full annualized list price (monthly × 12) when on an annual plan. */
+  compareAtLabel?: string;
+}
+
+export function getAnnualCompareAtLabel(
+  planId: Extract<Plan, "PRO" | "AGENCY">,
+): string {
+  const monthly =
+    planId === "PRO" ? PRO_MONTHLY_PRICE_USD : AGENCY_MONTHLY_PRICE_USD;
+
+  return `$${monthly * 12}/yr`;
 }
 
 export function getPlanDisplayPricing(
@@ -150,6 +161,7 @@ export function getPlanDisplayPricing(
     return {
       priceLabel: `$${amount}`,
       priceSubtext: "per year",
+      compareAtLabel: getAnnualCompareAtLabel(planId),
     };
   }
 

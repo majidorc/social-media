@@ -3,9 +3,11 @@
 import { startCheckout } from "@/lib/start-checkout";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Toast } from "@/components/ui/Toast";
 import { CheckoutButton } from "@/components/subscription/CheckoutButton";
 import { PlanBadge } from "@/components/subscription/PlanBadge";
 import { PLAN_DEFINITIONS } from "@/lib/plans";
+import { promoBadgeClassName } from "@/lib/ui-classes";
 import { cn } from "@/lib/utils";
 import type {
   BillingInterval,
@@ -80,7 +82,7 @@ function getPlanChangeActions(
       },
       {
         id: "pro-monthly-to-annual",
-        label: "Switch to Annual (Save 2 Months!)",
+        label: "Switch to Annual billing",
         planType: "PRO",
         billingInterval: "ANNUAL",
         variant: "secondary",
@@ -111,14 +113,14 @@ function getPlanChangeActions(
     return [
       {
         id: "agency-to-pro-monthly",
-        label: "Downgrade to Pro",
+        label: "Downgrade to Pro Plan",
         planType: "PRO",
         billingInterval: "MONTHLY",
         variant: "secondary",
       },
       {
         id: "agency-monthly-to-annual",
-        label: "Switch to Annual (Save 2 Months!)",
+        label: "Switch to Annual billing",
         planType: "AGENCY",
         billingInterval: "ANNUAL",
         variant: "primary",
@@ -130,7 +132,7 @@ function getPlanChangeActions(
     return [
       {
         id: "agency-to-pro-annual",
-        label: "Downgrade to Pro Annual",
+        label: "Downgrade to Pro Plan (Annual)",
         planType: "PRO",
         billingInterval: "ANNUAL",
         variant: "secondary",
@@ -162,6 +164,13 @@ export function SubscriptionBillingCard({
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRestoringPlan, setIsRestoringPlan] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<"success" | "error">("success");
+
+  const showToast = (message: string, variant: "success" | "error" = "success") => {
+    setToastVariant(variant);
+    setToastMessage(message);
+  };
 
   const planDefinition = PLAN_DEFINITIONS.find((item) => item.id === plan);
   const isPaidPlan = plan === "PRO" || plan === "AGENCY";
@@ -180,19 +189,21 @@ export function SubscriptionBillingCard({
       const result = await startCheckout(action.planType, action.billingInterval);
 
       if (result.updated) {
-        onNotice(
+        const text =
           result.message ??
-            "Your subscription was updated. Stripe applied proration automatically.",
-        );
+          "Your subscription was updated. Stripe applied proration automatically.";
+        onNotice(text);
+        showToast(text);
         router.refresh();
         return;
       }
     } catch (changeError) {
-      onError(
+      const text =
         changeError instanceof Error
           ? changeError.message
-          : "Failed to update subscription.",
-      );
+          : "Failed to update subscription.";
+      onError(text);
+      showToast(text, "error");
     } finally {
       setPendingActionId(null);
     }
@@ -229,13 +240,15 @@ export function SubscriptionBillingCard({
         result.message ??
           "Subscription cancelled. Your prorated refund has been sent to your card.",
       );
+      showToast(result.message ?? "Subscription cancelled.");
       router.refresh();
     } catch (cancelError) {
-      onError(
+      const text =
         cancelError instanceof Error
           ? cancelError.message
-          : "Failed to cancel subscription.",
-      );
+          : "Failed to cancel subscription.";
+      onError(text);
+      showToast(text, "error");
     } finally {
       setIsCancelling(false);
     }
@@ -263,21 +276,28 @@ export function SubscriptionBillingCard({
           ? `Your ${result.plan} plan has been restored.`
           : "Subscription restored.",
       );
+      showToast(
+        result.plan
+          ? `Your ${result.plan} plan has been restored.`
+          : "Subscription restored.",
+      );
       router.refresh();
     } catch (restoreError) {
-      onError(
+      const text =
         restoreError instanceof Error
           ? restoreError.message
-          : "Failed to restore subscription.",
-      );
+          : "Failed to restore subscription.";
+      onError(text);
+      showToast(text, "error");
     } finally {
       setIsRestoringPlan(false);
     }
   };
 
   return (
+    <>
     <Card
-      title="Subscription & Billing Plan"
+      title="Subscription & Billing"
       description="Upgrade, downgrade, switch billing cycles, or cancel with fair prorated refunds."
       className={cn(
         isPaidPlan &&
@@ -292,7 +312,7 @@ export function SubscriptionBillingCard({
               <p className="text-sm font-semibold text-foreground">Current plan</p>
               <PlanBadge plan={plan} className="px-3 py-1 text-xs" />
               {isPaidPlan && isAnnual ? (
-                <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                <span className={cn(promoBadgeClassName, "py-0.5 font-semibold")}>
                   Saved 2 Months!
                 </span>
               ) : null}
@@ -343,22 +363,20 @@ export function SubscriptionBillingCard({
           <div className="flex flex-col gap-2 border-t border-border pt-4 sm:items-stretch">
             {plan === "FREE" ? (
               <>
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <CheckoutButton
-                    planType="PRO"
-                    billingInterval="MONTHLY"
-                    className="h-10 w-full rounded-lg bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-500/25 sm:w-auto"
-                  >
-                    Upgrade to Pro
-                  </CheckoutButton>
-                  <Link
-                    href="/pricing"
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-card-muted sm:w-auto"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Compare all plans
-                  </Link>
-                </div>
+                <Link
+                  href="/pricing"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-medium text-white transition-all hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-500/25 sm:w-auto sm:self-start"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Upgrade Plan
+                </Link>
+                <CheckoutButton
+                  planType="PRO"
+                  billingInterval="MONTHLY"
+                  className="h-10 w-full rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-card-muted sm:w-auto sm:self-start"
+                >
+                  Quick checkout — Pro Monthly
+                </CheckoutButton>
                 {canRestoreSubscription ? (
                   <>
                     <Button
@@ -429,7 +447,7 @@ export function SubscriptionBillingCard({
                       Processing refund...
                     </>
                   ) : (
-                    "Cancel Subscription"
+                    "Cancel Subscription & Get Instant Refund"
                   )}
                 </Button>
 
@@ -458,5 +476,11 @@ export function SubscriptionBillingCard({
         ) : null}
       </div>
     </Card>
+    <Toast
+      message={toastMessage}
+      variant={toastVariant}
+      onDismiss={() => setToastMessage(null)}
+    />
+    </>
   );
 }
