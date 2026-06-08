@@ -529,9 +529,16 @@ export async function changeUserSubscription(
   }
 
   const stripe = getStripeClient();
+  const customerId = resolveStripeCustomerId(subscription.customer);
+
+  if (!customerId) {
+    throw new Error("Subscription has no Stripe customer.");
+  }
+
   const updated = await stripe.subscriptions.update(subscription.id, {
     items: [{ id: subscriptionItemId, price: priceId }],
     proration_behavior: "create_prorations",
+    billing_cycle_anchor: "now",
     metadata: {
       ...subscription.metadata,
       userId,
@@ -540,7 +547,22 @@ export async function changeUserSubscription(
     },
   });
 
-  await syncPlanFromStripeSubscription(updated);
+  const draftInvoice = await stripe.invoices.create({
+    customer: customerId,
+    subscription: updated.id,
+  });
+
+  let invoice =
+    draftInvoice.status === "draft"
+      ? await stripe.invoices.finalizeInvoice(draftInvoice.id)
+      : draftInvoice;
+
+  if (invoice.amount_due > 0) {
+    invoice = await stripe.invoices.pay(invoice.id);
+  }
+
+  const syncedSubscription = await stripe.subscriptions.retrieve(updated.id);
+  await syncPlanFromStripeSubscription(syncedSubscription);
 
   const intervalLabel = targetInterval === "ANNUAL" ? "annual" : "monthly";
 
