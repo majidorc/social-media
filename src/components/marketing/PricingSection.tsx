@@ -13,7 +13,12 @@ function isCheckoutPlan(planId: string): planId is CheckoutPlanType {
   return planId === "PRO" || planId === "AGENCY";
 }
 
-export function PricingSection() {
+interface PricingSectionProps {
+  /** When true, Free tier shows current-plan state instead of Google sign-in. */
+  isAuthenticated?: boolean;
+}
+
+export function PricingSection({ isAuthenticated = false }: PricingSectionProps) {
   const [billingInterval, setBillingInterval] =
     useState<MarketingBillingInterval>("MONTHLY");
 
@@ -139,6 +144,10 @@ export function PricingSection() {
                   >
                     Choose {plan.name}
                   </CheckoutButton>
+                ) : isAuthenticated ? (
+                  <div className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-card-muted px-4 py-3 text-sm font-medium text-muted">
+                    Your current plan
+                  </div>
                 ) : (
                   <GetStartedButton className="w-full" />
                 )}

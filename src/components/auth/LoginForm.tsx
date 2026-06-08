@@ -6,7 +6,7 @@ import { Alert, AlertCode } from "@/components/ui/Alert";
 import { APP_NAME } from "@/lib/constants";
 import { AlertCircle, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   Configuration:
@@ -39,7 +39,7 @@ interface LoginCardProps {
   authConfigured: boolean;
 }
 
-export function LoginCard({ authConfigured }: LoginCardProps) {
+function LoginCardContent({ authConfigured }: LoginCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signInError } = useGoogleIdentity();
@@ -110,5 +110,19 @@ export function LoginCard({ authConfigured }: LoginCardProps) {
         tied to your account.
       </p>
     </div>
+  );
+}
+
+export function LoginCard({ authConfigured }: LoginCardProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted">
+          Loading sign-in...
+        </div>
+      }
+    >
+      <LoginCardContent authConfigured={authConfigured} />
+    </Suspense>
   );
 }

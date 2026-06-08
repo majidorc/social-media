@@ -31,7 +31,7 @@ export default async function PricingPage() {
             premium workflow features.
           </p>
         </header>
-        <PricingSection />
+        <PricingSection isAuthenticated />
       </AppShell>
     );
   }

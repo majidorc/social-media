@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { GoogleIdentityRootProvider } from "@/components/providers/GoogleIdentityRootProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { getGoogleClientId, isAuthConfigured } from "@/lib/auth-config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,7 +35,14 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-background font-sans text-foreground">
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <GoogleIdentityRootProvider
+              clientId={getGoogleClientId()}
+              authConfigured={isAuthConfigured()}
+            >
+              {children}
+            </GoogleIdentityRootProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
