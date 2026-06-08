@@ -1,40 +1,75 @@
-import type { Plan } from "@prisma/client";
+import type { BillingInterval, Plan } from "@prisma/client";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import {
+  calculateDaysUsedSinceActivation,
+  calculateFairRefundCents,
+  isPaidPlan,
+} from "@/lib/billing-refund";
+import {
   getStripeClient,
   getSubscriptionPeriodEnd,
+  inferBillingIntervalFromSubscription,
+  parseBillingInterval,
   parseCheckoutPlanType,
   resolveInvoiceSubscriptionId,
   resolveStripeCustomerId,
   resolveStripeSubscriptionId,
+  resolveSubscriptionActivationUnix,
 } from "@/lib/stripe";
 
 interface UpsertUserPlanInput {
   userId: string;
   plan: Plan;
-  stripeCustomerId: string | null;
-  planExpiresAt: Date | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  billingInterval?: BillingInterval | null;
+  planActivatedAt?: Date | null;
+  planExpiresAt?: Date | null;
 }
 
-export async function upsertUserPlan({
-  userId,
-  plan,
-  stripeCustomerId,
-  planExpiresAt,
-}: UpsertUserPlanInput) {
+export async function upsertUserPlan(input: UpsertUserPlanInput) {
+  const {
+    userId,
+    plan,
+    stripeCustomerId,
+    stripeSubscriptionId,
+    billingInterval,
+    planActivatedAt,
+    planExpiresAt,
+  } = input;
+
   await prisma.userSettings.upsert({
     where: { userId },
     create: {
       userId,
       plan,
-      stripeCustomerId,
-      planExpiresAt,
+      stripeCustomerId: stripeCustomerId ?? null,
+      stripeSubscriptionId: stripeSubscriptionId ?? null,
+      billingInterval: billingInterval ?? null,
+      planActivatedAt: planActivatedAt ?? null,
+      planExpiresAt: planExpiresAt ?? null,
     },
     update: {
       plan,
-      stripeCustomerId,
-      planExpiresAt,
+      ...(stripeCustomerId !== undefined ? { stripeCustomerId } : {}),
+      ...(stripeSubscriptionId !== undefined ? { stripeSubscriptionId } : {}),
+      ...(billingInterval !== undefined ? { billingInterval } : {}),
+      ...(planActivatedAt !== undefined ? { planActivatedAt } : {}),
+      ...(planExpiresAt !== undefined ? { planExpiresAt } : {}),
+    },
+  });
+}
+
+export async function resetUserSubscription(userId: string) {
+  await prisma.userSettings.update({
+    where: { userId },
+    data: {
+      plan: "FREE",
+      billingInterval: null,
+      stripeSubscriptionId: null,
+      planActivatedAt: null,
+      planExpiresAt: null,
     },
   });
 }
@@ -46,15 +81,39 @@ export function resolvePlanFromPriceId(
     return null;
   }
 
-  const proPriceId = process.env.STRIPE_PRICE_ID_PRO?.trim();
-  const agencyPriceId = process.env.STRIPE_PRICE_ID_AGENCY?.trim();
+  const priceIds = [
+    process.env.STRIPE_PRICE_ID_PRO?.trim(),
+    process.env.STRIPE_PRICE_ID_PRO_ANNUAL?.trim(),
+    process.env.STRIPE_PRICE_ID_AGENCY?.trim(),
+    process.env.STRIPE_PRICE_ID_AGENCY_ANNUAL?.trim(),
+  ];
 
-  if (proPriceId && priceId === proPriceId) {
-    return "PRO";
+  if (priceIds[0] && priceId === priceIds[0]) return "PRO";
+  if (priceIds[1] && priceId === priceIds[1]) return "PRO";
+  if (priceIds[2] && priceId === priceIds[2]) return "AGENCY";
+  if (priceIds[3] && priceId === priceIds[3]) return "AGENCY";
+
+  return null;
+}
+
+export function resolveBillingIntervalFromPriceId(
+  priceId: string | null | undefined,
+): BillingInterval | null {
+  if (!priceId) {
+    return null;
   }
 
-  if (agencyPriceId && priceId === agencyPriceId) {
-    return "AGENCY";
+  const proAnnual = process.env.STRIPE_PRICE_ID_PRO_ANNUAL?.trim();
+  const agencyAnnual = process.env.STRIPE_PRICE_ID_AGENCY_ANNUAL?.trim();
+  const proMonthly = process.env.STRIPE_PRICE_ID_PRO?.trim();
+  const agencyMonthly = process.env.STRIPE_PRICE_ID_AGENCY?.trim();
+
+  if (priceId === proAnnual || priceId === agencyAnnual) {
+    return "ANNUAL";
+  }
+
+  if (priceId === proMonthly || priceId === agencyMonthly) {
+    return "MONTHLY";
   }
 
   return null;
@@ -88,6 +147,23 @@ async function safeSubscriptionPeriodEnd(
     );
     return null;
   }
+}
+
+function buildSubscriptionSyncFields(
+  subscription: Stripe.Subscription,
+  existingActivatedAt: Date | null | undefined,
+) {
+  const activationUnix = resolveSubscriptionActivationUnix(subscription);
+  const billingInterval =
+    parseBillingInterval(subscription.metadata?.billingInterval) ??
+    inferBillingIntervalFromSubscription(subscription);
+
+  return {
+    stripeSubscriptionId: subscription.id,
+    billingInterval,
+    planActivatedAt:
+      existingActivatedAt ?? new Date(activationUnix * 1000),
+  };
 }
 
 async function applyCheckoutSession(
@@ -129,11 +205,26 @@ async function applyCheckoutSession(
   const subscriptionId = resolveStripeSubscriptionId(session.subscription);
   const planExpiresAt = await safeSubscriptionPeriodEnd(subscriptionId);
 
+  const billingInterval =
+    parseBillingInterval(session.metadata?.billingInterval) ??
+    (subscription
+      ? inferBillingIntervalFromSubscription(subscription)
+      : "MONTHLY");
+
+  const syncFields = subscription
+    ? buildSubscriptionSyncFields(subscription, null)
+    : {
+        stripeSubscriptionId: subscriptionId,
+        billingInterval,
+        planActivatedAt: new Date(),
+      };
+
   await upsertUserPlan({
     userId,
     plan: planType,
     stripeCustomerId,
     planExpiresAt,
+    ...syncFields,
   });
 
   return { plan: planType, userId };
@@ -197,10 +288,17 @@ export async function syncPlanFromStripeSubscription(
   const stripeCustomerId = resolveStripeCustomerId(subscription.customer);
   let userId: string | null = subscription.metadata?.userId ?? null;
 
+  const existingSettings = userId
+    ? await prisma.userSettings.findUnique({
+        where: { userId },
+        select: { planActivatedAt: true },
+      })
+    : null;
+
   if (!userId && stripeCustomerId) {
     const settings = await prisma.userSettings.findFirst({
       where: { stripeCustomerId },
-      select: { userId: true },
+      select: { userId: true, planActivatedAt: true },
     });
     userId = settings?.userId ?? null;
   }
@@ -213,7 +311,18 @@ export async function syncPlanFromStripeSubscription(
     return;
   }
 
+  const settingsForActivation =
+    existingSettings ??
+    (await prisma.userSettings.findUnique({
+      where: { userId },
+      select: { planActivatedAt: true },
+    }));
+
   const planExpiresAt = await safeSubscriptionPeriodEnd(subscription.id);
+  const syncFields = buildSubscriptionSyncFields(
+    subscription,
+    settingsForActivation?.planActivatedAt,
+  );
 
   if (
     subscription.status === "canceled" ||
@@ -224,6 +333,9 @@ export async function syncPlanFromStripeSubscription(
       userId,
       plan: "FREE",
       stripeCustomerId,
+      stripeSubscriptionId: null,
+      billingInterval: null,
+      planActivatedAt: null,
       planExpiresAt: null,
     });
     return;
@@ -234,6 +346,7 @@ export async function syncPlanFromStripeSubscription(
     plan,
     stripeCustomerId,
     planExpiresAt,
+    ...syncFields,
   });
 }
 
@@ -291,4 +404,93 @@ export async function syncPlanForUser(
   }
 
   return { plan };
+}
+
+export async function cancelSubscriptionWithFairRefund(userId: string) {
+  const settings = await prisma.userSettings.findUnique({
+    where: { userId },
+  });
+
+  if (!settings?.stripeCustomerId) {
+    throw new Error("No Stripe billing profile found for this account.");
+  }
+
+  if (!isPaidPlan(settings.plan)) {
+    throw new Error("You are not on a paid subscription plan.");
+  }
+
+  const stripe = getStripeClient();
+  let subscription: Stripe.Subscription | undefined;
+
+  if (settings.stripeSubscriptionId) {
+    subscription = await stripe.subscriptions.retrieve(settings.stripeSubscriptionId);
+  } else {
+    const subscriptions = await stripe.subscriptions.list({
+      customer: settings.stripeCustomerId,
+      status: "active",
+      limit: 1,
+    });
+    subscription = subscriptions.data[0];
+  }
+
+  if (!subscription || subscription.status !== "active") {
+    throw new Error("No active subscription found to cancel.");
+  }
+
+  const billingInterval =
+    settings.billingInterval ?? inferBillingIntervalFromSubscription(subscription);
+  const activationUnix = resolveSubscriptionActivationUnix(subscription);
+  const daysUsed = calculateDaysUsedSinceActivation(activationUnix);
+
+  const invoices = await stripe.invoices.list({
+    subscription: subscription.id,
+    status: "paid",
+    limit: 1,
+  });
+  const latestInvoice = invoices.data[0];
+  const amountPaidCents = latestInvoice?.amount_paid ?? 0;
+
+  const refundCents = calculateFairRefundCents({
+    plan: settings.plan,
+    billingInterval,
+    daysUsed,
+    amountPaidCents,
+  });
+
+  if (refundCents > 0 && latestInvoice) {
+    const invoiceWithPayment = latestInvoice as Stripe.Invoice & {
+      payment_intent?: string | Stripe.PaymentIntent | null;
+      charge?: string | Stripe.Charge | null;
+    };
+    const paymentIntent = invoiceWithPayment.payment_intent;
+    const paymentIntentId =
+      typeof paymentIntent === "string" ? paymentIntent : paymentIntent?.id;
+    const chargeId =
+      typeof invoiceWithPayment.charge === "string"
+        ? invoiceWithPayment.charge
+        : invoiceWithPayment.charge?.id;
+
+    if (paymentIntentId) {
+      await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        amount: refundCents,
+        reason: "requested_by_customer",
+      });
+    } else if (chargeId) {
+      await stripe.refunds.create({
+        charge: chargeId,
+        amount: refundCents,
+        reason: "requested_by_customer",
+      });
+    }
+  }
+
+  await stripe.subscriptions.cancel(subscription.id);
+  await resetUserSubscription(userId);
+
+  return {
+    refundCents,
+    daysUsed,
+    billingInterval,
+  };
 }

@@ -2,12 +2,13 @@
 
 import { CheckoutError, startCheckout } from "@/lib/start-checkout";
 import { cn } from "@/lib/utils";
-import type { CheckoutPlanType } from "@/types";
+import type { CheckoutPlanType, MarketingBillingInterval } from "@/types";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface CheckoutButtonProps {
   planType: CheckoutPlanType;
+  billingInterval?: MarketingBillingInterval;
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
@@ -15,6 +16,7 @@ interface CheckoutButtonProps {
 
 export function CheckoutButton({
   planType,
+  billingInterval = "MONTHLY",
   children,
   className,
   disabled = false,
@@ -27,7 +29,7 @@ export function CheckoutButton({
     setIsLoading(true);
 
     try {
-      await startCheckout(planType);
+      await startCheckout(planType, billingInterval);
     } catch (checkoutError) {
       setError(
         checkoutError instanceof CheckoutError

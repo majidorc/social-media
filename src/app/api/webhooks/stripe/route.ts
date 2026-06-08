@@ -15,6 +15,9 @@ async function resetUserPlanByCustomerId(customerId: string) {
     where: { stripeCustomerId: customerId },
     data: {
       plan: "FREE",
+      billingInterval: null,
+      stripeSubscriptionId: null,
+      planActivatedAt: null,
       planExpiresAt: null,
     },
   });

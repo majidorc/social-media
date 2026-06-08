@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import {
   getStripeClient,
   getStripePriceId,
+  isBillingInterval,
   isCheckoutPlanType,
 } from "@/lib/stripe";
 import type { CheckoutSessionResponse } from "@/types";
@@ -16,6 +17,12 @@ const checkoutSchema = z.object({
   planType: z.string().refine(isCheckoutPlanType, {
     message: 'planType must be "PRO" or "AGENCY".',
   }),
+  billingInterval: z
+    .string()
+    .refine(isBillingInterval, {
+      message: 'billingInterval must be "MONTHLY" or "ANNUAL".',
+    })
+    .default("MONTHLY"),
 });
 
 export async function POST(request: Request) {
@@ -32,8 +39,9 @@ export async function POST(request: Request) {
     }
 
     const planType = parsed.data.planType;
+    const billingInterval = parsed.data.billingInterval;
     const stripe = getStripeClient();
-    const priceId = getStripePriceId(planType);
+    const priceId = getStripePriceId(planType, billingInterval);
 
     const settings = await prisma.userSettings.upsert({
       where: { userId: user.id },
@@ -61,11 +69,13 @@ export async function POST(request: Request) {
       metadata: {
         userId: user.id,
         planType,
+        billingInterval,
       },
       subscription_data: {
         metadata: {
           userId: user.id,
           planType,
+          billingInterval,
         },
       },
       ...(settings.stripeCustomerId

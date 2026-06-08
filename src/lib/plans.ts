@@ -1,7 +1,15 @@
 import type { Plan, WatermarkPosition } from "@prisma/client";
+import type { BillingInterval } from "@prisma/client";
 import { DEFAULT_WATERMARK_POSITION } from "@/lib/watermark-position";
+import {
+  AGENCY_ANNUAL_PRICE_USD,
+  AGENCY_MONTHLY_PRICE_USD,
+  PRO_ANNUAL_PRICE_USD,
+  PRO_MONTHLY_PRICE_USD,
+} from "@/lib/billing-refund";
 
 export type { Plan };
+export type { BillingInterval };
 
 export interface PlanDefinition {
   id: Plan;
@@ -126,4 +134,30 @@ export function getMinimumPlanForFeature(
 
 export function getPlanLabel(plan: Plan): string {
   return PLAN_DEFINITIONS.find((item) => item.id === plan)?.name ?? plan;
+}
+
+export interface PlanDisplayPricing {
+  priceLabel: string;
+  priceSubtext: string;
+}
+
+export function getPlanDisplayPricing(
+  planId: Extract<Plan, "PRO" | "AGENCY">,
+  billingInterval: BillingInterval,
+): PlanDisplayPricing {
+  if (billingInterval === "ANNUAL") {
+    const amount = planId === "PRO" ? PRO_ANNUAL_PRICE_USD : AGENCY_ANNUAL_PRICE_USD;
+    return {
+      priceLabel: `$${amount}`,
+      priceSubtext: "per year",
+    };
+  }
+
+  const amount =
+    planId === "PRO" ? PRO_MONTHLY_PRICE_USD : AGENCY_MONTHLY_PRICE_USD;
+
+  return {
+    priceLabel: `$${amount}`,
+    priceSubtext: "per month",
+  };
 }

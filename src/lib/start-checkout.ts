@@ -1,4 +1,8 @@
-import type { CheckoutSessionResponse, CheckoutPlanType } from "@/types";
+import type {
+  CheckoutSessionResponse,
+  CheckoutPlanType,
+  MarketingBillingInterval,
+} from "@/types";
 
 export class CheckoutError extends Error {
   constructor(
@@ -16,12 +20,15 @@ function buildLoginRedirectUrl(): string {
   return `/login?${params.toString()}`;
 }
 
-export async function startCheckout(planType: CheckoutPlanType): Promise<void> {
+export async function startCheckout(
+  planType: CheckoutPlanType,
+  billingInterval: MarketingBillingInterval = "MONTHLY",
+): Promise<void> {
   const response = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ planType }),
+    body: JSON.stringify({ planType, billingInterval }),
   });
 
   if (response.status === 401) {

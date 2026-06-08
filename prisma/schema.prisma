@@ -41,6 +41,11 @@ enum Role {
   ADMIN
 }
 
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -100,7 +105,10 @@ model UserSettings {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   defaultAiModel     String             @default("gpt-4o")
   plan                  Plan               @default(FREE)
+  billingInterval       BillingInterval?
   stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  planActivatedAt       DateTime?
   planExpiresAt         DateTime?
   watermarkLogoUrl      String?            @db.Text
   watermarkPosition     WatermarkPosition  @default(BOTTOM_RIGHT)

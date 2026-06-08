@@ -125,6 +125,8 @@ export async function getSettings(): Promise<SettingsResponse> {
   return {
     defaultAiModel: settings.defaultAiModel,
     plan,
+    billingInterval: settings.billingInterval,
+    planActivatedAt: settings.planActivatedAt?.toISOString() ?? null,
     planExpiresAt: settings.planExpiresAt?.toISOString() ?? null,
     hasStripeCustomer: Boolean(settings.stripeCustomerId),
     planFeatures,

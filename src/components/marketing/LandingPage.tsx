@@ -2,6 +2,7 @@
 
 import { GoogleIdentityProvider } from "@/components/auth/GoogleIdentityProvider";
 import { GetStartedButton } from "@/components/marketing/GetStartedButton";
+import { LandingAuthAlert } from "@/components/marketing/LandingAuthAlert";
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { Navbar } from "@/components/layout/Navbar";
 import { APP_NAME } from "@/lib/constants";
@@ -59,6 +60,7 @@ export function LandingPage({ authConfigured, googleClientId }: LandingPageProps
         </div>
 
         <Navbar />
+        <LandingAuthAlert />
 
         <main>
           <section className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20">

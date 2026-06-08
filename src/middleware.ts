@@ -77,6 +77,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  const isAdminRoute =
+    pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
+
+  if (isAdminRoute && isLoggedIn && token?.role !== "ADMIN") {
+    if (pathname.startsWith("/api/")) {
+      return withOptionalCookieCleanup(
+        request,
+        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        token,
+      );
+    }
+
+    return withOptionalCookieCleanup(
+      request,
+      NextResponse.redirect(new URL("/dashboard", request.url)),
+      token,
+    );
+  }
+
   return withOptionalCookieCleanup(request, NextResponse.next(), token);
 }
 

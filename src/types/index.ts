@@ -1,8 +1,9 @@
-import type { Plan, Platform, Role, WatermarkPosition } from "@prisma/client";
+import type { Plan, Platform, Role, WatermarkPosition, BillingInterval } from "@prisma/client";
 import type { PlanFeatures } from "@/lib/plans";
 
-export type { Platform, AiProvider, WatermarkPosition, Plan, Role } from "@prisma/client";
+export type { Platform, AiProvider, WatermarkPosition, Plan, Role, BillingInterval } from "@prisma/client";
 export type CheckoutPlanType = Extract<Plan, "PRO" | "AGENCY">;
+export type MarketingBillingInterval = "MONTHLY" | "ANNUAL";
 export type { PlanFeatures } from "@/lib/plans";
 
 export interface PlatformOutput {
@@ -72,6 +73,8 @@ export interface BrandProfileSummary {
 export interface SettingsResponse {
   defaultAiModel: string;
   plan: Plan;
+  billingInterval: BillingInterval | null;
+  planActivatedAt: string | null;
   planExpiresAt: string | null;
   hasStripeCustomer: boolean;
   planFeatures: PlanFeatures;
@@ -181,4 +184,10 @@ export interface AdminUpdateUserResponse {
 
 export interface CheckoutSessionResponse {
   url: string;
+}
+
+export interface CancelSubscriptionResponse {
+  success: boolean;
+  refundAmountCents: number;
+  message: string;
 }

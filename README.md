@@ -1,41 +1,59 @@
 # AI Content Hub
 
-**Bring Your Own Key (BYOK) Social Media Automation SaaS** — generate platform-native copy, AI visuals with brand watermarks, and schedule campaigns from one workspace. Sign in with **Google Native GSI (One Tap + Popup)**, connect your own OpenAI / Anthropic / Google keys, and upgrade through **Stripe** when you need Pro or Agency capabilities.
+**Bring Your Own Key (BYOK) Social Media Automation SaaS** — generate platform-native copy, AI visuals with brand watermarks, and schedule campaigns from one workspace. You connect your own OpenAI, Anthropic, and Google API keys, so the platform host carries **zero AI token overhead**. Subscriptions unlock premium workflow features, not token resale.
 
-Production deployment: [https://aisocial.majidorc.com](https://aisocial.majidorc.com) (Coolify + Docker).
+Production: deploy via **Docker** + **Coolify** with live Stripe webhooks at `/api/webhooks/stripe`.
+
+---
+
+## Concept: BYOK infrastructure
+
+AI Content Hub is designed as a **workflow layer** on top of your existing AI accounts:
+
+- **You pay providers directly** for model usage (OpenAI, Anthropic, Google).
+- **We charge for SaaS features** — multi-platform generation, planner, watermark controls, multi-brand workspaces, and subscription lifecycle tooling.
+- **Keys are encrypted at rest** with `ENCRYPTION_SECRET` before storage in PostgreSQL.
+
+This model keeps margins predictable for operators and gives creators full control over model spend.
 
 ---
 
 ## Features
 
-### Content generation & distribution
+### Automated cross-platform expansion
 
-- **Multi-platform campaign output** — one idea becomes tailored copy for **Instagram**, **Twitter/X**, **LinkedIn**, **TikTok**, **Facebook**, and **YouTube** in a single generation run.
-- **Reels / TikTok storyboarding** — short-form scripts with ready-to-record voiceover-style copy structured for vertical video workflows.
-- **AI image generation** — optional **DALL-E 3** or **Google Imagen** visuals alongside text, with per-run model overrides.
-- **Token usage & cost tracking** — provider usage metadata stored per workspace for transparency.
+Generate tailored copy for **Instagram**, **Twitter/X**, **LinkedIn**, **TikTok**, **Facebook**, and **YouTube** from a single idea. Pro and Agency tiers unlock all platforms simultaneously.
 
-### Branding & creative control
+### Dynamic video / Reels scripting
 
-- **Automated logo watermarking** — upload a brand mark and apply it to generated images.
-- **Watermark position presets** — Free tier uses bottom-right default; Pro/Agency unlock all corner and center placements.
-- **Brand profile context** — company name, description, website, and social handle feed into generation prompts.
+Short-form modules produce Reels/TikTok storyboards with ready-to-record voiceover-style scripts structured for vertical video workflows.
 
-### Planning & workflow
+### Automated logo watermark stamping
 
-- **Visual editorial calendar** — drag-and-drop content planner (Pro/Agency) to schedule posts and manage publishing timelines.
-- **Generation history** — sidebar recall of recent workspaces; retention gated by plan (3 days Free, unlimited paid).
-- **Multi-brand client switching** — Agency tier supports multiple brand profiles and fast context switching for client work.
+Upload a brand mark and apply it to AI-generated images with coordinate-based placement presets (Free: default corner; Pro/Agency: all corners + center).
 
-### Authentication & billing
+### Visual drag-and-drop editorial calendar
 
-- **Google Native GSI OAuth** — official Identity Services **One Tap** on the landing page and **popup sign-in** for the unified **Get Started** CTA, backed by **NextAuth.js**.
-- **Stripe subscriptions** — Pro ($19/mo) and Agency ($49/mo) checkout, webhook-driven plan sync, billing portal for invoices / payment methods / cancellation, and subscription restore from Settings.
-- **Feature gating** — platform count, planner access, watermark positions, brand profile limits, and history retention enforced server-side.
+Pro and Agency subscribers schedule generated content on an interactive planner with calendar views and post management.
 
-### Admin
+### Multi-brand dashboard switches (Agency)
 
-- **Admin panel** — manage users and plans (owner email auto-promoted to ADMIN).
+Manage up to ten client brand profiles, switch context instantly, and keep generation prompts aligned per company.
+
+### Google Native GSI authentication
+
+Official **Google Identity Services** — One Tap on the landing page and secure popup sign-in for the unified **Get Started** button, integrated with NextAuth.js.
+
+### Abuse-protected fair refund matrix
+
+In-app cancellation via `/api/checkout/cancel` applies transparent proration:
+
+| Billing | Policy |
+| --- | --- |
+| **Monthly** | Refund unused days at the standard monthly daily rate ($19÷30.416 Pro, $49÷30.416 Agency). |
+| **Annual early cancel** | Days used are charged at the **full monthly daily rate** (not the discounted annual rate). Remaining balance is refunded instantly to the card. |
+
+Annual plans include **two months free** (Pro $190/yr, Agency $490/yr).
 
 ---
 
@@ -43,54 +61,17 @@ Production deployment: [https://aisocial.majidorc.com](https://aisocial.majidorc
 
 | Layer | Technology |
 | --- | --- |
-| Framework | **Next.js 15** (App Router, Server Actions, dynamic routes, middleware) |
-| UI | **React 19**, **Tailwind CSS v4**, light/dark theme tokens |
-| Database | **PostgreSQL** + **Prisma ORM 6** |
-| Auth | **NextAuth.js v4** (Google provider, JWT sessions, Prisma adapter) |
-| Billing | **Stripe** Checkout, Billing Portal, signed webhooks |
-| AI | OpenAI, Anthropic, Google Gemini / Imagen (BYOK) |
-| Deploy | **Docker** multi-stage image, **Coolify** |
-
----
-
-## Project structure
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── auth/[...nextauth]/     # NextAuth handlers
-│   │   ├── auth/google/code/       # GSI popup code exchange
-│   │   ├── checkout/               # Stripe checkout, portal, sync, restore
-│   │   ├── webhooks/stripe/        # Subscription lifecycle webhooks
-│   │   ├── generate/               # AI content + image generation
-│   │   ├── planner/                # Scheduled posts API
-│   │   └── settings/               # API keys, watermark, brand profiles
-│   ├── dashboard/                  # Content generator workspace
-│   ├── planner/                    # Editorial calendar
-│   ├── settings/                   # BYOK keys, billing, brand context
-│   ├── admin/                      # User administration
-│   └── page.tsx                    # Marketing landing + pricing
-├── components/
-│   ├── auth/                       # GoogleIdentityProvider, login UI
-│   ├── settings/                   # SettingsForm, SubscriptionBillingCard
-│   └── subscription/               # Plan badges, checkout buttons
-├── lib/
-│   ├── ai/                         # Providers, prompts, cost calculator
-│   ├── actions/                    # Server actions (settings, planner)
-│   ├── subscription-sync.ts        # Stripe → Prisma plan sync
-│   └── auth.ts                     # NextAuth configuration
-prisma/
-├── schema.prisma                   # User, UserSettings, BrandProfile, workspaces
-└── migrations/
-Dockerfile                          # Production container
-```
+| Framework | Next.js 15 (App Router, Server Actions, dynamic routes) |
+| UI | React 19, Tailwind CSS v4, light/dark design tokens |
+| Database | PostgreSQL + Prisma ORM 6 |
+| Auth | NextAuth.js v4 + Google GSI One Tap / popup |
+| Billing | Stripe Checkout, Customer Portal, signed webhooks, fair-refund cancel API |
+| AI | BYOK — OpenAI, Anthropic, Google Gemini / Imagen / DALL-E |
+| Deploy | Docker multi-stage image, Coolify |
 
 ---
 
 ## Environment configuration
-
-Copy the example file and fill in values:
 
 ```bash
 cp .env.example .env
@@ -101,22 +82,24 @@ cp .env.example .env
 | Variable | Description |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
-| `ENCRYPTION_SECRET` | Encrypts stored AI provider API keys at rest |
-| `NEXTAUTH_SECRET` | Session signing secret — generate with `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Public app URL, **no trailing slash** (e.g. `https://aisocial.majidorc.com`) |
-| `GOOGLE_CLIENT_ID` | Google OAuth Web client ID (also used for GSI One Tap / popup) |
+| `ENCRYPTION_SECRET` | Encrypts stored AI provider API keys |
+| `NEXTAUTH_SECRET` | Session signing secret (`openssl rand -base64 32`) |
+| `NEXTAUTH_URL` | Public app URL, **no trailing slash** |
+| `GOOGLE_CLIENT_ID` | Google OAuth / GSI client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `STRIPE_SECRET_KEY` | Stripe secret key (`sk_live_...` or `sk_test_...`) |
-| `STRIPE_PRICE_ID_PRO` | Stripe Price ID for the Pro monthly plan |
-| `STRIPE_PRICE_ID_AGENCY` | Stripe Price ID for the Agency monthly plan |
-| `STRIPE_WEBHOOK_SECRET` | Signing secret from the Stripe webhook endpoint |
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `STRIPE_PRICE_ID_PRO` | Stripe Price ID — Pro **monthly** |
+| `STRIPE_PRICE_ID_AGENCY` | Stripe Price ID — Agency **monthly** |
+| `STRIPE_PRICE_ID_PRO_ANNUAL` | Stripe Price ID — Pro **annual** ($190/yr) |
+| `STRIPE_PRICE_ID_AGENCY_ANNUAL` | Stripe Price ID — Agency **annual** ($490/yr) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 
-### Optional variables
+### Optional
 
 | Variable | Description |
 | --- | --- |
-| `NEXTAUTH_DEBUG` | Set to `"true"` for verbose NextAuth server logs |
-| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Stabilizes Server Action encryption if added later |
+| `NEXTAUTH_DEBUG` | `"true"` for verbose NextAuth logs |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Server Actions encryption key |
 
 ---
 
@@ -124,146 +107,89 @@ cp .env.example .env
 
 ### Prerequisites
 
-- **Node.js** ≥ 22.13
-- **PostgreSQL** database
-- **Google Cloud** OAuth Web application credentials
-- **Stripe** account with Products/Prices for Pro and Agency tiers
-- At least one AI provider API key for generation (OpenAI, Anthropic, or Google)
+- Node.js ≥ 22.13
+- PostgreSQL
+- Google Cloud OAuth Web client
+- Stripe account with monthly + annual prices
+- At least one AI provider API key
 
 ### Local development
 
 ```bash
 npm install
-npx prisma db push    # sync schema to local database
-# or: npm run db:migrate
+npx prisma migrate dev   # or: npm run db:push
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Unauthenticated visitors see the landing page with Google One Tap; protected routes redirect to `/?callbackUrl=...`.
+Open [http://localhost:3000](http://localhost:3000). Google One Tap appears for signed-out visitors.
 
-### Google OAuth & GSI (local)
+### Google OAuth / GSI
 
-In [Google Cloud Console](https://console.cloud.google.com/) → **Credentials** → OAuth Web client:
+**Authorized JavaScript origins:** `http://localhost:3000`  
+**Authorized redirect URIs:** `http://localhost:3000/api/auth/callback/google`
 
-**Authorized JavaScript origins**
-
-```
-http://localhost:3000
-```
-
-**Authorized redirect URIs**
-
-```
-http://localhost:3000/api/auth/callback/google
-```
-
-Set in `.env`:
-
-```bash
-NEXTAUTH_URL=http://localhost:3000
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-```
-
-### Stripe (local)
-
-1. Create **Pro** and **Agency** recurring prices in Stripe Dashboard.
-2. Add price IDs to `.env` as `STRIPE_PRICE_ID_PRO` and `STRIPE_PRICE_ID_AGENCY`.
-3. Forward webhooks to your local app (Stripe CLI example):
+### Stripe webhooks (local)
 
 ```bash
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
-4. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
+Recommended events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`.
 
-**Enable the Stripe Customer Portal** in Dashboard → Settings → Billing → Customer portal (required for “Manage or Cancel Subscription” in Settings).
-
-Recommended webhook events:
-
-- `checkout.session.completed`
-- `customer.subscription.created`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-- `invoice.payment_succeeded`
+Enable the **Stripe Customer Portal** in Dashboard → Billing → Customer portal.
 
 ---
 
 ## Production deployment (Docker / Coolify)
 
-The repository ships a multi-stage **Dockerfile**. Coolify (or any Docker host) should build from the Dockerfile and expose port **3000**.
-
-Container startup:
+Build from the included `Dockerfile`. Container startup runs migrations then Next.js:
 
 ```bash
-npm start   # runs: prisma migrate deploy && next start
+npm start   # prisma migrate deploy && next start
 ```
 
 ### Production checklist
 
-```bash
-DATABASE_URL=postgresql://...
-ENCRYPTION_SECRET=...
-NEXTAUTH_SECRET=...
-NEXTAUTH_URL=https://your-domain.com
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_PRICE_ID_PRO=price_...
-STRIPE_PRICE_ID_AGENCY=price_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-NODE_ENV=production
-```
-
-### Google OAuth (production)
-
-**Authorized JavaScript origins**
-
-```
-https://your-domain.com
-```
-
-**Authorized redirect URIs**
-
-```
-https://your-domain.com/api/auth/callback/google
-```
-
-> Do **not** add a trailing slash to `NEXTAUTH_URL`. Values like `https://example.com/` can cause Google `redirect_uri_mismatch` errors.
-
-### Stripe webhook (production)
-
-Register a live webhook endpoint pointing to:
+Set all required env vars above. Register live webhook:
 
 ```
 https://your-domain.com/api/webhooks/stripe
 ```
 
-Use the signing secret as `STRIPE_WEBHOOK_SECRET`. After deploy, run a test checkout and confirm the user’s plan updates in Settings → **Subscription & Billing**.
+### Admin access
 
-Billing portal return URL is configured in code as `{NEXTAUTH_URL}/settings`.
-
----
-
-## Subscription plans
-
-| Plan | Price | Highlights |
-| --- | --- | --- |
-| **Free** | $0 | Single platform, default watermark, 3-day history, BYOK |
-| **Pro** | $19/mo | All platforms, planner, custom watermark positions, unlimited history |
-| **Agency** | $49/mo | Everything in Pro + multi-brand profiles (up to 10) |
-
-Upgrade from the landing page **#pricing** section or Settings → **Upgrade Plan**. Paid users manage billing through **Manage or Cancel Subscription** (Stripe Customer Portal).
+The owner email `o0dr.orc0o@gmail.com` is auto-promoted to **ADMIN** on sign-in. The `/admin` route and `/api/admin/users` API are protected — non-admins are redirected to `/dashboard`.
 
 ---
 
-## Usage workflow
+## Subscription lifecycle
 
-1. **Get Started** on the homepage — Google One Tap or popup sign-in.
-2. **Settings** — add encrypted API keys, set default model, configure brand profile and watermark.
-3. **Subscription & Billing** — view plan tier, renewal date, upgrade, or open Stripe portal.
-4. **Dashboard** — enter an idea, optional image, select platforms, generate copy (+ optional AI image).
-5. **Planner** (Pro/Agency) — schedule generated content on the editorial calendar.
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /api/checkout` | Create Stripe Checkout (monthly or annual) |
+| `POST /api/checkout/sync` | Sync plan after redirect |
+| `POST /api/checkout/restore` | Restore plan from Stripe customer |
+| `POST /api/checkout/portal` | Open Stripe billing portal |
+| `POST /api/checkout/cancel` | Cancel + fair prorated refund |
+| `POST /api/webhooks/stripe` | Webhook-driven plan sync |
+
+Settings → **Subscription & Billing** shows plan tier, activation date, renewal date, annual savings badge, upgrade link, and instant cancel/refund.
+
+---
+
+## Project structure
+
+```
+src/
+├── app/api/checkout/          # checkout, cancel, portal, sync, restore
+├── app/api/webhooks/stripe/   # subscription webhooks
+├── components/marketing/      # landing, pricing FAQ, GSI
+├── components/settings/       # SubscriptionBillingCard
+├── lib/billing-refund.ts      # fair refund math
+├── lib/subscription-sync.ts   # Stripe ↔ Prisma sync
+└── lib/auth.ts                # NextAuth + owner admin promotion
+prisma/schema.prisma           # UserSettings billing fields
+```
 
 ---
 
@@ -271,22 +197,12 @@ Upgrade from the landing page **#pricing** section or Settings → **Upgrade Pla
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start development server |
-| `npm run build` | `prisma generate` + production Next.js build |
-| `npm start` | Apply migrations + start production server |
-| `npm run db:migrate` | Create/apply Prisma migrations (dev) |
-| `npm run db:push` | Push schema to database without migration files |
-| `npm run db:studio` | Open Prisma Studio |
-| `npm run lint` | Run ESLint |
-
----
-
-## Security notes
-
-- API keys are encrypted with `ENCRYPTION_SECRET` before persistence.
-- Sessions use HTTP-only cookies; middleware protects dashboard, planner, settings, admin, and billing API routes.
-- Stripe webhooks are verified with `STRIPE_WEBHOOK_SECRET` before mutating subscription state.
-- Google GSI popup codes are exchanged server-side; ID tokens are validated through NextAuth.
+| `npm run dev` | Development server |
+| `npm run build` | Prisma generate + production build |
+| `npm start` | Migrate + start production |
+| `npm run db:migrate` | Prisma migrate dev |
+| `npm run db:push` | Push schema without migration files |
+| `npm run lint` | ESLint |
 
 ---
 

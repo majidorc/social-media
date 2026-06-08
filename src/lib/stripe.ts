@@ -1,9 +1,11 @@
 import Stripe from "stripe";
+import type { BillingInterval } from "@prisma/client";
 import type { CheckoutPlanType } from "@/types";
 
 export type { CheckoutPlanType };
 
 const CHECKOUT_PLAN_TYPES: CheckoutPlanType[] = ["PRO", "AGENCY"];
+const BILLING_INTERVALS: BillingInterval[] = ["MONTHLY", "ANNUAL"];
 
 let stripeClient: Stripe | null = null;
 
@@ -37,9 +39,32 @@ export function parseCheckoutPlanType(
   return value;
 }
 
-export function getStripePriceId(planType: CheckoutPlanType): string {
+export function isBillingInterval(value: string): value is BillingInterval {
+  return BILLING_INTERVALS.includes(value as BillingInterval);
+}
+
+export function parseBillingInterval(
+  value: string | null | undefined,
+): BillingInterval | null {
+  if (!value || !isBillingInterval(value)) {
+    return null;
+  }
+
+  return value;
+}
+
+export function getStripePriceId(
+  planType: CheckoutPlanType,
+  billingInterval: BillingInterval = "MONTHLY",
+): string {
   const envKey =
-    planType === "PRO" ? "STRIPE_PRICE_ID_PRO" : "STRIPE_PRICE_ID_AGENCY";
+    billingInterval === "ANNUAL"
+      ? planType === "PRO"
+        ? "STRIPE_PRICE_ID_PRO_ANNUAL"
+        : "STRIPE_PRICE_ID_AGENCY_ANNUAL"
+      : planType === "PRO"
+        ? "STRIPE_PRICE_ID_PRO"
+        : "STRIPE_PRICE_ID_AGENCY";
   const priceId = process.env[envKey]?.trim();
 
   if (!priceId) {
@@ -47,6 +72,11 @@ export function getStripePriceId(planType: CheckoutPlanType): string {
   }
 
   return priceId;
+}
+
+/** @deprecated Use getStripePriceId(planType, interval) */
+export function getStripePriceIdLegacy(planType: CheckoutPlanType): string {
+  return getStripePriceId(planType, "MONTHLY");
 }
 
 export function resolveAppBaseUrl(): string {
@@ -118,4 +148,31 @@ export async function getSubscriptionPeriodEnd(
   }
 
   return new Date(periodEnd * 1000);
+}
+
+export function resolveSubscriptionActivationUnix(
+  subscription: Stripe.Subscription,
+): number {
+  const items = subscription.items?.data ?? [];
+  const periodStart = items.length
+    ? Math.min(...items.map((item) => item.current_period_start))
+    : subscription.start_date;
+
+  return Number.isFinite(periodStart) ? periodStart : subscription.start_date;
+}
+
+export function inferBillingIntervalFromSubscription(
+  subscription: Stripe.Subscription,
+): BillingInterval {
+  const fromMetadata = parseBillingInterval(subscription.metadata?.billingInterval);
+  if (fromMetadata) {
+    return fromMetadata;
+  }
+
+  const price = subscription.items?.data?.[0]?.price;
+  if (price?.recurring?.interval === "year") {
+    return "ANNUAL";
+  }
+
+  return "MONTHLY";
 }

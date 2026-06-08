@@ -478,6 +478,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
       <SubscriptionBillingCard
         plan={initialSettings.plan}
+        billingInterval={initialSettings.billingInterval}
+        planActivatedAt={initialSettings.planActivatedAt}
         planExpiresAt={initialSettings.planExpiresAt}
         hasStripeCustomer={initialSettings.hasStripeCustomer}
         onNotice={(text) => {
