@@ -1,11 +1,17 @@
 "use client";
 
+import { startCheckout } from "@/lib/start-checkout";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PlanBadge } from "@/components/subscription/PlanBadge";
 import { PLAN_DEFINITIONS } from "@/lib/plans";
 import { cn } from "@/lib/utils";
-import type { BillingInterval, Plan } from "@/types";
+import type {
+  BillingInterval,
+  CheckoutPlanType,
+  MarketingBillingInterval,
+  Plan,
+} from "@/types";
 import {
   CalendarClock,
   CalendarPlus,
@@ -16,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface SubscriptionBillingCardProps {
   plan: Plan;
@@ -28,12 +34,116 @@ interface SubscriptionBillingCardProps {
   onError: (message: string | null) => void;
 }
 
+interface PlanChangeAction {
+  id: string;
+  label: string;
+  planType: CheckoutPlanType;
+  billingInterval: MarketingBillingInterval;
+  variant?: "primary" | "secondary";
+}
+
 function formatLocalizedDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString(undefined, {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+}
+
+function resolveEffectiveInterval(
+  plan: Plan,
+  billingInterval: BillingInterval | null,
+): MarketingBillingInterval {
+  if (billingInterval === "ANNUAL" || billingInterval === "MONTHLY") {
+    return billingInterval;
+  }
+
+  return "MONTHLY";
+}
+
+function getPlanChangeActions(
+  plan: Plan,
+  billingInterval: BillingInterval | null,
+): PlanChangeAction[] {
+  const interval = resolveEffectiveInterval(plan, billingInterval);
+
+  if (plan === "PRO" && interval === "MONTHLY") {
+    return [
+      {
+        id: "pro-to-agency-monthly",
+        label: "Upgrade to Agency",
+        planType: "AGENCY",
+        billingInterval: "MONTHLY",
+        variant: "primary",
+      },
+      {
+        id: "pro-monthly-to-annual",
+        label: "Switch to Annual (Save 2 Months!)",
+        planType: "PRO",
+        billingInterval: "ANNUAL",
+        variant: "secondary",
+      },
+    ];
+  }
+
+  if (plan === "PRO" && interval === "ANNUAL") {
+    return [
+      {
+        id: "pro-to-agency-annual",
+        label: "Upgrade to Agency Annual",
+        planType: "AGENCY",
+        billingInterval: "ANNUAL",
+        variant: "primary",
+      },
+      {
+        id: "pro-annual-to-monthly",
+        label: "Switch to Monthly Billing",
+        planType: "PRO",
+        billingInterval: "MONTHLY",
+        variant: "secondary",
+      },
+    ];
+  }
+
+  if (plan === "AGENCY" && interval === "MONTHLY") {
+    return [
+      {
+        id: "agency-to-pro-monthly",
+        label: "Downgrade to Pro",
+        planType: "PRO",
+        billingInterval: "MONTHLY",
+        variant: "secondary",
+      },
+      {
+        id: "agency-monthly-to-annual",
+        label: "Switch to Annual (Save 2 Months!)",
+        planType: "AGENCY",
+        billingInterval: "ANNUAL",
+        variant: "primary",
+      },
+    ];
+  }
+
+  if (plan === "AGENCY" && interval === "ANNUAL") {
+    return [
+      {
+        id: "agency-to-pro-annual",
+        label: "Downgrade to Pro Annual",
+        planType: "PRO",
+        billingInterval: "ANNUAL",
+        variant: "secondary",
+      },
+      {
+        id: "agency-annual-to-monthly",
+        label: "Switch to Monthly Billing",
+        planType: "AGENCY",
+        billingInterval: "MONTHLY",
+        variant: "secondary",
+      },
+    ];
+  }
+
+  return [];
 }
 
 export function SubscriptionBillingCard({
@@ -46,12 +156,44 @@ export function SubscriptionBillingCard({
   onError,
 }: SubscriptionBillingCardProps) {
   const router = useRouter();
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRestoringPlan, setIsRestoringPlan] = useState(false);
 
   const planDefinition = PLAN_DEFINITIONS.find((item) => item.id === plan);
   const isPaidPlan = plan === "PRO" || plan === "AGENCY";
   const isAnnual = billingInterval === "ANNUAL";
+  const planChangeActions = useMemo(
+    () => getPlanChangeActions(plan, billingInterval),
+    [plan, billingInterval],
+  );
+
+  const handlePlanChange = async (action: PlanChangeAction) => {
+    setPendingActionId(action.id);
+    onError(null);
+    onNotice("");
+
+    try {
+      const result = await startCheckout(action.planType, action.billingInterval);
+
+      if (result.updated) {
+        onNotice(
+          result.message ??
+            "Your subscription was updated. Stripe applied proration automatically.",
+        );
+        router.refresh();
+        return;
+      }
+    } catch (changeError) {
+      onError(
+        changeError instanceof Error
+          ? changeError.message
+          : "Failed to update subscription.",
+      );
+    } finally {
+      setPendingActionId(null);
+    }
+  };
 
   const handleCancelSubscription = async () => {
     const confirmed = window.confirm(
@@ -130,15 +272,15 @@ export function SubscriptionBillingCard({
 
   return (
     <Card
-      title="Subscription & Billing"
-      description="Manage your workspace tier, renewal dates, and fair prorated refunds."
+      title="Subscription & Billing Plan"
+      description="Upgrade, downgrade, switch billing cycles, or cancel with fair prorated refunds."
       className={cn(
         isPaidPlan &&
           "border-violet-500/25 bg-gradient-to-br from-accent-soft/40 via-card to-card",
       )}
     >
       <div className="space-y-5">
-        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card-muted/80 p-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card-muted/80 p-4">
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Sparkles className="h-4 w-4 shrink-0 text-accent-text" />
@@ -147,6 +289,11 @@ export function SubscriptionBillingCard({
               {isPaidPlan && isAnnual ? (
                 <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
                   Saved 2 Months!
+                </span>
+              ) : null}
+              {isPaidPlan && billingInterval ? (
+                <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-medium text-muted">
+                  {billingInterval === "ANNUAL" ? "Annual billing" : "Monthly billing"}
                 </span>
               ) : null}
             </div>
@@ -188,56 +335,85 @@ export function SubscriptionBillingCard({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-            {isPaidPlan ? (
-              <Button
-                type="button"
-                variant="danger"
-                disabled={isCancelling || !hasStripeCustomer}
-                onClick={() => void handleCancelSubscription()}
-                className="w-full sm:w-auto"
-              >
-                {isCancelling ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing refund...
-                  </>
-                ) : (
-                  "Cancel Subscription & Get Instant Prorated Refund"
-                )}
-              </Button>
-            ) : (
-              <Link
-                href="/#pricing"
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-medium text-white transition-all hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 sm:w-auto"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Upgrade Plan
-              </Link>
-            )}
-
+          <div className="flex flex-col gap-2 border-t border-border pt-4 sm:items-stretch">
             {plan === "FREE" ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={isRestoringPlan}
-                onClick={() => void handleRestoreSubscription()}
-                className="w-full sm:w-auto"
-              >
-                <RefreshCw
-                  className={cn("h-4 w-4", isRestoringPlan && "animate-spin")}
-                />
-                Restore subscription
-              </Button>
-            ) : null}
+              <>
+                <Link
+                  href="/#pricing"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-medium text-white transition-all hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-500/25 sm:w-auto sm:self-start"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Upgrade Plan
+                </Link>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isRestoringPlan}
+                  onClick={() => void handleRestoreSubscription()}
+                  className="w-full sm:w-auto sm:self-start"
+                >
+                  <RefreshCw
+                    className={cn("h-4 w-4", isRestoringPlan && "animate-spin")}
+                  />
+                  Restore subscription
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  {planChangeActions.map((action) => (
+                    <Button
+                      key={action.id}
+                      type="button"
+                      variant={action.variant ?? "secondary"}
+                      size="sm"
+                      disabled={
+                        Boolean(pendingActionId) ||
+                        isCancelling ||
+                        !hasStripeCustomer
+                      }
+                      onClick={() => void handlePlanChange(action)}
+                      className="w-full sm:w-auto"
+                    >
+                      {pendingActionId === action.id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Updating plan...
+                        </>
+                      ) : (
+                        action.label
+                      )}
+                    </Button>
+                  ))}
+                </div>
 
-            {isPaidPlan && !hasStripeCustomer ? (
-              <p className="max-w-xs text-right text-xs text-muted">
-                Cancellation unavailable until Stripe sync completes. Try restoring
-                your subscription first.
-              </p>
-            ) : null}
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  disabled={isCancelling || !hasStripeCustomer || Boolean(pendingActionId)}
+                  onClick={() => void handleCancelSubscription()}
+                  className="w-full sm:w-auto sm:self-start"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing refund...
+                    </>
+                  ) : (
+                    "Cancel Subscription"
+                  )}
+                </Button>
+
+                {!hasStripeCustomer ? (
+                  <p className="text-xs text-muted">
+                    Plan changes unavailable until Stripe sync completes. Try
+                    restoring your subscription first.
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
 

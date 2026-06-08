@@ -44,6 +44,17 @@ Manage up to ten client brand profiles, switch context instantly, and keep gener
 
 Official **Google Identity Services** — One Tap on the landing page and secure popup sign-in for the unified **Get Started** button, integrated with NextAuth.js.
 
+### Flexible plan changes (upgrade / downgrade / billing cycle)
+
+Paid subscribers can change plans from **Settings → Subscription & Billing Plan** or via `POST /api/checkout`:
+
+| Current state | Available actions |
+| --- | --- |
+| **FREE** | New Stripe Checkout session |
+| **Active paid** | `stripe.subscriptions.update` with automatic Stripe proration (tier moves Pro ↔ Agency, Monthly ↔ Annual) |
+
+Stripe computes proration credits/charges instantly when switching tiers or billing intervals mid-cycle.
+
 ### Abuse-protected fair refund matrix
 
 In-app cancellation via `/api/checkout/cancel` applies transparent proration:
@@ -166,14 +177,14 @@ The owner email `o0dr.orc0o@gmail.com` is auto-promoted to **ADMIN** on sign-in.
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /api/checkout` | Create Stripe Checkout (monthly or annual) |
+| `POST /api/checkout` | New checkout (FREE) or in-place plan/cycle change (paid, prorated) |
 | `POST /api/checkout/sync` | Sync plan after redirect |
 | `POST /api/checkout/restore` | Restore plan from Stripe customer |
 | `POST /api/checkout/portal` | Open Stripe billing portal |
 | `POST /api/checkout/cancel` | Cancel + fair prorated refund |
 | `POST /api/webhooks/stripe` | Webhook-driven plan sync |
 
-Settings → **Subscription & Billing** shows plan tier, activation date, renewal date, annual savings badge, upgrade link, and instant cancel/refund.
+Settings → **Subscription & Billing Plan** shows tier, billing cycle, activation/renewal dates, contextual upgrade/downgrade/cycle buttons, and instant cancel/refund.
 
 ---
 

@@ -183,7 +183,11 @@ export interface AdminUpdateUserResponse {
 }
 
 export interface CheckoutSessionResponse {
-  url: string;
+  url?: string;
+  updated?: boolean;
+  plan?: Plan;
+  billingInterval?: BillingInterval;
+  message?: string;
 }
 
 export interface CancelSubscriptionResponse {

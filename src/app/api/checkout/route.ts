@@ -4,6 +4,10 @@ import { appUrl } from "@/lib/auth";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { prisma } from "@/lib/prisma";
 import {
+  changeUserSubscription,
+  getActiveSubscriptionForUser,
+} from "@/lib/subscription-sync";
+import {
   getStripeClient,
   getStripePriceId,
   isBillingInterval,
@@ -40,6 +44,40 @@ export async function POST(request: Request) {
 
     const planType = parsed.data.planType;
     const billingInterval = parsed.data.billingInterval;
+
+    const activeSubscription = await getActiveSubscriptionForUser(user.id);
+
+    if (activeSubscription) {
+      try {
+        const changeResult = await changeUserSubscription(
+          user.id,
+          planType,
+          billingInterval,
+        );
+
+        const response: CheckoutSessionResponse = {
+          updated: true,
+          plan: changeResult.plan,
+          billingInterval: changeResult.billingInterval,
+          message: changeResult.message,
+        };
+
+        return NextResponse.json(response);
+      } catch (changeError) {
+        if (
+          changeError instanceof Error &&
+          changeError.message === "ALREADY_ON_PLAN"
+        ) {
+          return NextResponse.json(
+            { error: "You are already on this plan and billing cycle." },
+            { status: 400 },
+          );
+        }
+
+        throw changeError;
+      }
+    }
+
     const stripe = getStripeClient();
     const priceId = getStripePriceId(planType, billingInterval);
 

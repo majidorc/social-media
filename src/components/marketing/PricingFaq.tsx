@@ -20,10 +20,10 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     id: "fair-refund",
-    question: "Fair Refund Policy",
+    question: "Fair Refund & Flexible Plan Policy",
     highlighted: true,
     answer:
-      "We value flexibility. If an annual subscriber cancels early, unused time is refunded immediately to the original payment method. Days already used are recalculated at the standard, non-discounted monthly tier rate ($19/mo for Pro, $49/mo for Agency) — not the discounted annual daily rate — and the remaining balance is returned to your card. Monthly subscribers receive a fair prorated refund using the same transparent daily rate.",
+      "You can upgrade or downgrade between tiers (Pro ↔ Agency) or switch billing intervals (Monthly ↔ Annual) at any time from Settings. Stripe automatically applies proration credits or charges when you change plans mid-cycle. If an annual subscriber cancels early, unused time is refunded immediately. Days already used are recalculated at the standard, non-discounted monthly tier rate ($19/mo for Pro, $49/mo for Agency) — not the discounted annual daily rate — and the remaining balance is returned to your card. Monthly cancellations use the same transparent daily rate for fair proration.",
   },
   {
     id: "annual-savings",

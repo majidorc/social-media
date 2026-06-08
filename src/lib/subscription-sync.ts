@@ -8,6 +8,7 @@ import {
 } from "@/lib/billing-refund";
 import {
   getStripeClient,
+  getStripePriceId,
   getSubscriptionPeriodEnd,
   inferBillingIntervalFromSubscription,
   parseBillingInterval,
@@ -437,6 +438,99 @@ export async function syncPlanForUser(
   }
 
   return { plan };
+}
+
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+export async function getActiveSubscriptionForUser(userId: string) {
+  const settings = await prisma.userSettings.findUnique({
+    where: { userId },
+  });
+
+  if (!settings?.stripeCustomerId) {
+    return null;
+  }
+
+  const stripe = getStripeClient();
+
+  if (settings.stripeSubscriptionId) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(
+        settings.stripeSubscriptionId,
+      );
+
+      if (ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+        return { subscription, settings };
+      }
+    } catch {
+      // Fall through to customer lookup.
+    }
+  }
+
+  const subscriptions = await stripe.subscriptions.list({
+    customer: settings.stripeCustomerId,
+    status: "all",
+    limit: 10,
+  });
+
+  const subscription = subscriptions.data.find((item) =>
+    ACTIVE_SUBSCRIPTION_STATUSES.has(item.status),
+  );
+
+  if (!subscription) {
+    return null;
+  }
+
+  return { subscription, settings };
+}
+
+export async function changeUserSubscription(
+  userId: string,
+  targetPlan: Extract<Plan, "PRO" | "AGENCY">,
+  targetInterval: BillingInterval,
+): Promise<{ plan: Plan; billingInterval: BillingInterval; message: string }> {
+  const active = await getActiveSubscriptionForUser(userId);
+
+  if (!active) {
+    throw new Error("NO_ACTIVE_SUBSCRIPTION");
+  }
+
+  const { subscription, settings } = active;
+  const currentInterval =
+    settings.billingInterval ?? inferBillingIntervalFromSubscription(subscription);
+
+  if (settings.plan === targetPlan && currentInterval === targetInterval) {
+    throw new Error("ALREADY_ON_PLAN");
+  }
+
+  const priceId = getStripePriceId(targetPlan, targetInterval);
+  const subscriptionItemId = subscription.items.data[0]?.id;
+
+  if (!subscriptionItemId) {
+    throw new Error("Subscription has no billable items.");
+  }
+
+  const stripe = getStripeClient();
+  const updated = await stripe.subscriptions.update(subscription.id, {
+    items: [{ id: subscriptionItemId, price: priceId }],
+    proration_behavior: "create_prorations",
+    metadata: {
+      ...subscription.metadata,
+      userId,
+      planType: targetPlan,
+      billingInterval: targetInterval,
+    },
+  });
+
+  await syncPlanFromStripeSubscription(updated);
+
+  const intervalLabel = targetInterval === "ANNUAL" ? "annual" : "monthly";
+
+  return {
+    plan: targetPlan,
+    billingInterval: targetInterval,
+    message: `Updated to ${targetPlan} (${intervalLabel}). Stripe applied proration credits automatically.`,
+  };
 }
 
 export async function cancelSubscriptionWithFairRefund(userId: string) {
