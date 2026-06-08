@@ -7,10 +7,9 @@ import { useEffect, useState } from "react";
 
 interface ThemeToggleProps {
   className?: string;
-  compact?: boolean;
 }
 
-export function ThemeToggle({ className, compact = false }: ThemeToggleProps) {
+export function ThemeToggle({ className }: ThemeToggleProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -26,21 +25,14 @@ export function ThemeToggle({ className, compact = false }: ThemeToggleProps) {
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card-muted text-foreground transition-colors hover:bg-card hover:text-foreground",
-        compact ? "h-9 w-9 shrink-0" : "w-full px-3 py-2.5 text-sm font-medium",
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card-muted text-foreground transition-all duration-200 hover:bg-card hover:shadow-sm",
         className,
       )}
     >
       {isDark ? (
-        <>
-          <Sun className="h-4 w-4 shrink-0 text-amber-400" />
-          {compact ? null : "Light mode"}
-        </>
+        <Sun className="h-4 w-4 text-amber-400 transition-transform duration-200" />
       ) : (
-        <>
-          <Moon className="h-4 w-4 shrink-0 text-violet-500" />
-          {compact ? null : "Dark mode"}
-        </>
+        <Moon className="h-4 w-4 text-violet-500 transition-transform duration-200" />
       )}
     </button>
   );

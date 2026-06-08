@@ -1,5 +1,8 @@
-import { Suspense } from "react";
+"use client";
+
+import { useState } from "react";
 import { GetStartedButton } from "@/components/marketing/GetStartedButton";
+import { LandingAuthModal } from "@/components/marketing/LandingAuthModal";
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { Navbar } from "@/components/layout/Navbar";
 import { APP_NAME } from "@/lib/constants";
@@ -43,6 +46,11 @@ const FEATURE_CARDS = [
 ];
 
 export function LandingPage({ authConfigured }: LandingPageProps) {
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  const openLogin = () => setLoginOpen(true);
+  const closeLogin = () => setLoginOpen(false);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
@@ -50,7 +58,7 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
         <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-violet-500/10 blur-3xl" />
       </div>
 
-      <Navbar />
+      <Navbar onGetStarted={openLogin} />
 
       <main>
         <section className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20">
@@ -71,16 +79,7 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-4">
-              <Suspense
-                fallback={
-                  <div className="h-11 w-full max-w-sm animate-pulse rounded-full bg-card-muted" />
-                }
-              >
-                <GetStartedButton
-                  authConfigured={authConfigured}
-                  className="mx-auto"
-                />
-              </Suspense>
+              <GetStartedButton onClick={openLogin} />
               <p className="text-xs text-muted">
                 Google sign-in only · No credit card required on Free
               </p>
@@ -107,7 +106,7 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
           </div>
         </section>
 
-        <PricingSection />
+        <PricingSection onGetStarted={openLogin} />
 
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
           <div className="rounded-3xl border border-violet-500/25 bg-gradient-to-br from-accent-soft via-card to-card px-6 py-10 text-center sm:px-10 sm:py-12">
@@ -119,13 +118,7 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
               multi-platform post in minutes.
             </p>
             <div className="mt-6 flex justify-center">
-              <Suspense
-                fallback={
-                  <div className="h-11 w-full max-w-sm animate-pulse rounded-full bg-card-muted" />
-                }
-              >
-                <GetStartedButton authConfigured={authConfigured} />
-              </Suspense>
+              <GetStartedButton onClick={openLogin} />
             </div>
           </div>
         </section>
@@ -137,6 +130,12 @@ export function LandingPage({ authConfigured }: LandingPageProps) {
           <p>Secure Google OAuth · Bring your own AI keys</p>
         </div>
       </footer>
+
+      <LandingAuthModal
+        open={loginOpen}
+        onClose={closeLogin}
+        authConfigured={authConfigured}
+      />
     </div>
   );
 }

@@ -1,16 +1,21 @@
 "use client";
 
 import { CheckoutButton } from "@/components/subscription/CheckoutButton";
+import { landingPrimaryCtaClassName } from "@/components/marketing/landing-cta-styles";
 import { PLAN_DEFINITIONS } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 import type { CheckoutPlanType } from "@/types";
 import { Check, Layers } from "lucide-react";
-import Link from "next/link";
 
 function isCheckoutPlan(planId: string): planId is CheckoutPlanType {
   return planId === "PRO" || planId === "AGENCY";
 }
 
-export function PricingSection() {
+interface PricingSectionProps {
+  onGetStarted: () => void;
+}
+
+export function PricingSection({ onGetStarted }: PricingSectionProps) {
   return (
     <section
       id="pricing"
@@ -82,12 +87,16 @@ export function PricingSection() {
                   Choose {plan.name}
                 </CheckoutButton>
               ) : (
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center rounded-xl border border-border bg-card-muted px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-card"
+                <button
+                  type="button"
+                  onClick={onGetStarted}
+                  className={cn(
+                    landingPrimaryCtaClassName,
+                    "w-full border border-border bg-card-muted text-foreground hover:bg-card dark:border-border dark:bg-card-muted dark:hover:bg-card",
+                  )}
                 >
                   Start free
-                </Link>
+                </button>
               )}
             </article>
           ))}

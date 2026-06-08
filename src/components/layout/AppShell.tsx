@@ -73,7 +73,7 @@ export function AppShell({
           <p className="truncate text-sm font-semibold">{APP_NAME}</p>
           <p className="truncate text-xs text-muted">AI content studio</p>
         </div>
-        <ThemeToggle compact />
+        <ThemeToggle />
         <button
           type="button"
           aria-label="New generation"

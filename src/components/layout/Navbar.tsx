@@ -1,16 +1,25 @@
+"use client";
+
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
-import {
-  landingNavSignInClassName,
-  landingPrimaryCtaClassName,
-} from "@/components/marketing/landing-cta-styles";
+import { GetStartedButton } from "@/components/marketing/GetStartedButton";
 import { APP_NAME } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 
-export function Navbar() {
+interface NavbarProps {
+  onGetStarted: () => void;
+  className?: string;
+}
+
+export function Navbar({ onGetStarted, className }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-20 border-b border-border/80 bg-background/80 backdrop-blur-xl">
+    <header
+      className={cn(
+        "sticky top-0 z-20 border-b border-border/80 bg-background/80 backdrop-blur-xl",
+        className,
+      )}
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-text">
@@ -24,15 +33,10 @@ export function Navbar() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
-          <Link
-            href="/login"
-            className={cn(landingNavSignInClassName, "hidden sm:inline-flex")}
-          >
-            Sign in
-          </Link>
-          <Link href="/login" className={landingPrimaryCtaClassName}>
-            Get started
-          </Link>
+          <GetStartedButton
+            onClick={onGetStarted}
+            className="w-auto shrink-0"
+          />
         </div>
       </div>
     </header>
