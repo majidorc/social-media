@@ -72,7 +72,7 @@ export function SidebarContent({
     );
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full w-full min-w-0 flex-col overflow-hidden">
       <div className="flex items-center gap-3 border-b border-border px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-text">
           <Sparkles className="h-5 w-5" />
@@ -106,7 +106,7 @@ export function SidebarContent({
         </button>
       </div>
 
-      <nav className="flex flex-col gap-1 px-3 pb-2">
+      <nav className="flex min-w-0 flex-col gap-1 px-3 pb-2">
         {navItems.slice(0, 2).map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const isPlanner = href === "/planner";
@@ -117,10 +117,10 @@ export function SidebarContent({
               key={href}
               href={href}
               onClick={onNavigate}
-              className={navLinkClass(active)}
+              className={cn(navLinkClass(active), "min-w-0")}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              <span className="flex-1">{label}</span>
+              <span className="min-w-0 flex-1 truncate">{label}</span>
               {showPlannerLock ? (
                 <Crown className="h-3.5 w-3.5 text-accent-text" aria-hidden="true" />
               ) : null}
@@ -168,7 +168,7 @@ export function SidebarContent({
         })}
       </nav>
 
-      <div className="mt-auto space-y-2 border-t border-border p-3">
+      <div className="mt-auto min-w-0 space-y-2 border-t border-border p-3">
         <ThemeToggle />
         {user ? (
           <UserMenu

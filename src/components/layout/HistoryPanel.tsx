@@ -208,7 +208,7 @@ export function HistoryPanel({ onNavigate }: HistoryPanelProps) {
   const isMutating = deletingId !== null || isClearingAll;
 
   return (
-    <section className="border-t border-border px-3 py-3 sm:py-4">
+    <section className="min-w-0 border-t border-border px-3 py-3 sm:py-4">
       <div className="mb-3 flex items-center gap-2 px-1">
         <History className="h-4 w-4 text-accent-text" />
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">

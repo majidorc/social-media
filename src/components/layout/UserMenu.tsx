@@ -32,8 +32,8 @@ export function UserMenu({ name, email, image, plan = "FREE" }: UserMenuProps) {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-foreground">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="min-w-0 truncate text-sm font-medium text-foreground">
               {name ?? "Signed in"}
             </p>
             <PlanBadge plan={plan} />

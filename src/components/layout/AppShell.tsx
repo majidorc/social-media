@@ -6,7 +6,7 @@ import { APP_NAME } from "@/lib/constants";
 import { notifyNewGenerationRequest } from "@/lib/generation-history-events";
 import type { Plan } from "@/types";
 import { cn } from "@/lib/utils";
-import { Menu, Plus, X } from "lucide-react";
+import { Menu, Plus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -110,7 +110,7 @@ export function AppShell({
       ) : null}
 
       <div className="lg:flex lg:min-h-screen">
-        <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex">
+        <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:overflow-hidden lg:border-r lg:border-border lg:bg-sidebar">
           <SidebarContent user={user} plan={plan} isAdmin={isAdmin} />
         </div>
 

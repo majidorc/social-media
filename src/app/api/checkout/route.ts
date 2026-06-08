@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       },
     });
 
-    const successUrl = `${appUrl}/dashboard?checkout=success&plan=${planType}`;
+    const successUrl = `${appUrl}/dashboard?checkout=success&plan=${planType}&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${appUrl}/settings?checkout=cancelled`;
 
     const session = await stripe.checkout.sessions.create({

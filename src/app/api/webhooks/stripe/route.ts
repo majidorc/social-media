@@ -1,43 +1,14 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import type { Plan } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
-  getStripeClient,
-  getSubscriptionPeriodEnd,
-  parseCheckoutPlanType,
-  resolveInvoiceSubscriptionId,
-  resolveStripeCustomerId,
-  resolveStripeSubscriptionId,
-} from "@/lib/stripe";
+  syncPlanFromCheckoutSessionEvent,
+  syncPlanFromInvoice,
+  syncPlanFromStripeSubscription,
+} from "@/lib/subscription-sync";
+import { getStripeClient, resolveStripeCustomerId } from "@/lib/stripe";
 
 export const runtime = "nodejs";
-
-async function upsertUserPlan(input: {
-  userId: string;
-  plan: Plan;
-  stripeCustomerId?: string | null;
-  planExpiresAt?: Date | null;
-}) {
-  await prisma.userSettings.upsert({
-    where: { userId: input.userId },
-    create: {
-      userId: input.userId,
-      plan: input.plan,
-      stripeCustomerId: input.stripeCustomerId ?? null,
-      planExpiresAt: input.planExpiresAt ?? null,
-    },
-    update: {
-      plan: input.plan,
-      ...(input.stripeCustomerId !== undefined
-        ? { stripeCustomerId: input.stripeCustomerId }
-        : {}),
-      ...(input.planExpiresAt !== undefined
-        ? { planExpiresAt: input.planExpiresAt }
-        : {}),
-    },
-  });
-}
 
 async function resetUserPlanByCustomerId(customerId: string) {
   await prisma.userSettings.updateMany({
@@ -47,64 +18,6 @@ async function resetUserPlanByCustomerId(customerId: string) {
       planExpiresAt: null,
     },
   });
-}
-
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.userId;
-  const planType = parseCheckoutPlanType(
-    session.metadata?.planType ?? session.metadata?.plan,
-  );
-
-  if (!userId || !planType) {
-    console.error("[stripe webhook] checkout.session.completed missing metadata", {
-      sessionId: session.id,
-      metadata: session.metadata,
-    });
-    return;
-  }
-
-  const stripeCustomerId = resolveStripeCustomerId(session.customer);
-  const subscriptionId = resolveStripeSubscriptionId(session.subscription);
-  const planExpiresAt = subscriptionId
-    ? await getSubscriptionPeriodEnd(subscriptionId)
-    : null;
-
-  await upsertUserPlan({
-    userId,
-    plan: planType,
-    stripeCustomerId,
-    planExpiresAt,
-  });
-}
-
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  const customerId = resolveStripeCustomerId(invoice.customer);
-  const subscriptionId = resolveInvoiceSubscriptionId(invoice);
-
-  if (!customerId || !subscriptionId) {
-    return;
-  }
-
-  const planExpiresAt = await getSubscriptionPeriodEnd(subscriptionId);
-
-  if (!planExpiresAt) {
-    return;
-  }
-
-  await prisma.userSettings.updateMany({
-    where: { stripeCustomerId: customerId },
-    data: { planExpiresAt },
-  });
-}
-
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const customerId = resolveStripeCustomerId(subscription.customer);
-
-  if (!customerId) {
-    return;
-  }
-
-  await resetUserPlanByCustomerId(customerId);
 }
 
 export async function POST(request: Request) {
@@ -138,14 +51,28 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "checkout.session.completed":
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        await syncPlanFromCheckoutSessionEvent(
+          event.data.object as Stripe.Checkout.Session,
+        );
+        break;
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+        await syncPlanFromStripeSubscription(
+          event.data.object as Stripe.Subscription,
+        );
         break;
       case "invoice.payment_succeeded":
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        await syncPlanFromInvoice(event.data.object as Stripe.Invoice);
         break;
-      case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = resolveStripeCustomerId(subscription.customer);
+
+        if (customerId) {
+          await resetUserPlanByCustomerId(customerId);
+        }
         break;
+      }
       default:
         break;
     }

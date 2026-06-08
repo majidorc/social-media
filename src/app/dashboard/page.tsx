@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ContentGenerator } from "@/components/dashboard/ContentGenerator";
+import { CheckoutSuccessHandler } from "@/components/subscription/CheckoutSuccessHandler";
 import { getSettings } from "@/lib/actions/settings";
 import { getDefaultModel } from "@/lib/actions/settings";
 import { isAdminRole } from "@/lib/admin";
@@ -26,6 +27,9 @@ export default async function DashboardPage() {
       plan={getEffectivePlan(user?.settings)}
       isAdmin={isAdminRole(user?.role)}
     >
+      <Suspense fallback={null}>
+        <CheckoutSuccessHandler />
+      </Suspense>
       <Suspense
         fallback={
           <div className="flex min-h-40 items-center justify-center text-sm text-muted">
