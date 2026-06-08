@@ -48,16 +48,30 @@ interface GoogleIdentityProviderProps {
   enableOneTap?: boolean;
 }
 
-function GoogleIdentityProviderInner({
+function GoogleIdentityCallbackUrlSync({
+  onChange,
+}: {
+  onChange: (callbackUrl: string) => void;
+}) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    onChange(normalizeAuthCallbackUrl(searchParams.get("callbackUrl")));
+  }, [onChange, searchParams]);
+
+  return null;
+}
+
+export function GoogleIdentityProvider({
   children,
   clientId,
   authConfigured,
   enableOneTap = true,
 }: GoogleIdentityProviderProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { status } = useSession();
-  const callbackUrl = normalizeAuthCallbackUrl(searchParams.get("callbackUrl"));
+  const [callbackUrl, setCallbackUrl] = useState("/dashboard");
+  const callbackUrlRef = useRef(callbackUrl);
 
   const [gsiReady, setGsiReady] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -66,26 +80,31 @@ function GoogleIdentityProviderInner({
   const codeClientRef = useRef<{ requestCode: () => void } | null>(null);
   const initializedRef = useRef(false);
 
+  useEffect(() => {
+    callbackUrlRef.current = callbackUrl;
+  }, [callbackUrl]);
+
   const finishSignIn = useCallback(
     async (credential: string) => {
       setIsSigningIn(true);
       setSignInError(null);
 
       try {
-        const result = await completeGoogleCredentialSignIn(credential, callbackUrl);
+        const targetUrl = callbackUrlRef.current;
+        const result = await completeGoogleCredentialSignIn(credential, targetUrl);
 
         if (!result.ok) {
           setSignInError(result.error ?? "Google sign-in failed.");
           return;
         }
 
-        router.push(callbackUrl);
+        router.push(targetUrl);
         router.refresh();
       } finally {
         setIsSigningIn(false);
       }
     },
-    [callbackUrl, router],
+    [router],
   );
 
   const handleCredentialResponse = useCallback(
@@ -130,14 +149,16 @@ function GoogleIdentityProviderInner({
         setIsSigningIn(true);
         setSignInError(null);
 
-        void completeGooglePopupSignIn(response.code, callbackUrl)
+        const targetUrl = callbackUrlRef.current;
+
+        void completeGooglePopupSignIn(response.code, targetUrl)
           .then((result) => {
             if (!result.ok) {
               setSignInError(result.error ?? "Google sign-in failed.");
               return;
             }
 
-            router.push(callbackUrl);
+            router.push(targetUrl);
             router.refresh();
           })
           .finally(() => {
@@ -150,7 +171,7 @@ function GoogleIdentityProviderInner({
         }
       },
     });
-  }, [authConfigured, callbackUrl, clientId, handleCredentialResponse, router]);
+  }, [authConfigured, clientId, handleCredentialResponse, router]);
 
   useEffect(() => {
     if (gsiReady) {
@@ -195,6 +216,9 @@ function GoogleIdentityProviderInner({
         signInError,
       }}
     >
+      <Suspense fallback={null}>
+        <GoogleIdentityCallbackUrlSync onChange={setCallbackUrl} />
+      </Suspense>
       {authConfigured && clientId ? (
         <Script
           src="https://accounts.google.com/gsi/client"
@@ -204,13 +228,5 @@ function GoogleIdentityProviderInner({
       ) : null}
       {children}
     </GoogleIdentityContext.Provider>
-  );
-}
-
-export function GoogleIdentityProvider(props: GoogleIdentityProviderProps) {
-  return (
-    <Suspense fallback={props.children}>
-      <GoogleIdentityProviderInner {...props} />
-    </Suspense>
   );
 }

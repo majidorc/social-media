@@ -383,13 +383,46 @@ export async function syncPlanForUser(
     throw new Error("No Stripe customer found for this account.");
   }
 
-  const subscriptions = await stripe.subscriptions.list({
-    customer: customerId,
-    status: "active",
-    limit: 1,
+  const settingsWithSub = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { stripeSubscriptionId: true },
   });
 
-  const subscription = subscriptions.data[0];
+  if (settingsWithSub?.stripeSubscriptionId) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(
+        settingsWithSub.stripeSubscriptionId,
+      );
+
+      if (
+        subscription.status === "active" ||
+        subscription.status === "trialing" ||
+        subscription.status === "past_due"
+      ) {
+        await syncPlanFromStripeSubscription(subscription);
+        const plan = resolvePlanFromSubscription(subscription);
+
+        if (plan) {
+          return { plan };
+        }
+      }
+    } catch {
+      // Fall through to customer subscription lookup.
+    }
+  }
+
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+    limit: 10,
+  });
+
+  const subscription = subscriptions.data.find(
+    (item) =>
+      item.status === "active" ||
+      item.status === "trialing" ||
+      item.status === "past_due",
+  );
 
   if (!subscription) {
     throw new Error("No active subscription found.");
