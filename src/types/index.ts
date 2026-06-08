@@ -72,6 +72,8 @@ export interface BrandProfileSummary {
 export interface SettingsResponse {
   defaultAiModel: string;
   plan: Plan;
+  planExpiresAt: string | null;
+  hasStripeCustomer: boolean;
   planFeatures: PlanFeatures;
   watermarkLogoUrl: string | null;
   watermarkPosition: WatermarkPosition;

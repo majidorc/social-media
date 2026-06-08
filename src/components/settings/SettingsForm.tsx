@@ -10,14 +10,14 @@ import { cn } from "@/lib/utils";
 import { useLiveModels } from "@/hooks/useLiveModels";
 import type { SettingsResponse } from "@/types";
 import type { WatermarkPosition } from "@/types";
+import { SubscriptionBillingCard } from "@/components/settings/SubscriptionBillingCard";
+import { UpgradeBanner } from "@/components/subscription/UpgradeBanner";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { PlanBadge } from "@/components/subscription/PlanBadge";
-import { UpgradeBanner } from "@/components/subscription/UpgradeBanner";
 import {
   KeyRound,
   ExternalLink,
@@ -449,62 +449,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     });
   };
 
-  const [isRestoringPlan, setIsRestoringPlan] = useState(false);
-
-  const handleRestoreSubscription = async () => {
-    setError(null);
-    setMessage(null);
-    setIsRestoringPlan(true);
-
-    try {
-      const response = await fetch("/api/checkout/restore", { method: "POST" });
-      const result = (await response.json()) as {
-        success?: boolean;
-        plan?: string;
-        error?: string;
-      };
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error ?? "Failed to restore subscription.");
-      }
-
-      setMessage(
-        result.plan
-          ? `Your ${result.plan} plan has been restored.`
-          : "Subscription restored.",
-      );
-      router.refresh();
-    } catch (restoreError) {
-      setError(
-        restoreError instanceof Error
-          ? restoreError.message
-          : "Failed to restore subscription.",
-      );
-    } finally {
-      setIsRestoringPlan(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm font-medium text-accent-text">Settings</p>
-          <PlanBadge plan={initialSettings.plan} />
-          {initialSettings.plan === "FREE" ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={isRestoringPlan}
-              onClick={() => void handleRestoreSubscription()}
-            >
-              <RefreshCw
-                className={cn("h-4 w-4", isRestoringPlan && "animate-spin")}
-              />
-              Restore subscription
-            </Button>
-          ) : null}
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           API keys & model preferences
@@ -526,6 +475,20 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           {error ?? message}
         </div>
       )}
+
+      <SubscriptionBillingCard
+        plan={initialSettings.plan}
+        planExpiresAt={initialSettings.planExpiresAt}
+        hasStripeCustomer={initialSettings.hasStripeCustomer}
+        onNotice={(text) => {
+          setError(null);
+          setMessage(text);
+        }}
+        onError={(text) => {
+          setMessage(null);
+          setError(text);
+        }}
+      />
 
       <Card
         title="API keys"

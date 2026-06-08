@@ -95,6 +95,7 @@ export const config = {
     "/api/download-image",
     "/api/settings/:path*",
     "/api/checkout",
+    "/api/checkout/:path*",
     "/api/models",
     "/api/models/:path*",
   ],

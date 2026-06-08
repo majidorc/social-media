@@ -125,6 +125,8 @@ export async function getSettings(): Promise<SettingsResponse> {
   return {
     defaultAiModel: settings.defaultAiModel,
     plan,
+    planExpiresAt: settings.planExpiresAt?.toISOString() ?? null,
+    hasStripeCustomer: Boolean(settings.stripeCustomerId),
     planFeatures,
     watermarkLogoUrl: settings.watermarkLogoUrl,
     watermarkPosition: resolveAllowedWatermarkPosition(
