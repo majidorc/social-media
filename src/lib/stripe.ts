@@ -1,7 +1,7 @@
 import Stripe from "stripe";
-import type { Plan } from "@prisma/client";
+import type { CheckoutPlanType } from "@/types";
 
-export type CheckoutPlanType = Extract<Plan, "PRO" | "AGENCY">;
+export type { CheckoutPlanType };
 
 const CHECKOUT_PLAN_TYPES: CheckoutPlanType[] = ["PRO", "AGENCY"];
 

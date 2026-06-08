@@ -2,6 +2,7 @@ import type { Plan, Platform, Role, WatermarkPosition } from "@prisma/client";
 import type { PlanFeatures } from "@/lib/plans";
 
 export type { Platform, AiProvider, WatermarkPosition, Plan, Role } from "@prisma/client";
+export type CheckoutPlanType = Extract<Plan, "PRO" | "AGENCY">;
 export type { PlanFeatures } from "@/lib/plans";
 
 export interface PlatformOutput {

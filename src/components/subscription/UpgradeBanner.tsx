@@ -1,7 +1,9 @@
+"use client";
+
+import { CheckoutButton } from "@/components/subscription/CheckoutButton";
 import { getPlanLabel } from "@/lib/plans";
-import type { Plan } from "@/types";
+import type { CheckoutPlanType, Plan } from "@/types";
 import { Crown, Sparkles } from "lucide-react";
-import Link from "next/link";
 
 interface UpgradeBannerProps {
   title: string;
@@ -10,12 +12,22 @@ interface UpgradeBannerProps {
   className?: string;
 }
 
+function toCheckoutPlanType(plan: Plan): CheckoutPlanType | null {
+  if (plan === "PRO" || plan === "AGENCY") {
+    return plan;
+  }
+
+  return null;
+}
+
 export function UpgradeBanner({
   title,
   description,
   requiredPlan,
   className,
 }: UpgradeBannerProps) {
+  const checkoutPlan = toCheckoutPlanType(requiredPlan);
+
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border border-violet-500/25 bg-gradient-to-br from-accent-soft via-card to-card p-6 sm:p-8 ${className ?? ""}`}
@@ -35,15 +47,17 @@ export function UpgradeBanner({
           <p className="max-w-xl text-sm leading-relaxed text-muted">{description}</p>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-          <Link
-            href="/#pricing"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-medium text-white transition-colors hover:bg-violet-500"
-          >
-            <Sparkles className="h-4 w-4" />
-            Upgrade to {getPlanLabel(requiredPlan)}
-          </Link>
-          <p className="text-xs text-muted">Billing integration coming soon.</p>
+        <div className="flex shrink-0 flex-col gap-2 sm:min-w-[12rem] sm:items-end">
+          {checkoutPlan ? (
+            <CheckoutButton
+              planType={checkoutPlan}
+              className="h-10 bg-violet-600 px-4 text-white hover:bg-violet-500"
+            >
+              <Sparkles className="h-4 w-4" />
+              Upgrade to {getPlanLabel(requiredPlan)}
+            </CheckoutButton>
+          ) : null}
+          <p className="text-xs text-muted">Secure checkout powered by Stripe.</p>
         </div>
       </div>
     </div>
