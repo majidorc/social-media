@@ -1,6 +1,8 @@
-import type { Platform, WatermarkPosition } from "@prisma/client";
+import type { Plan, Platform, WatermarkPosition } from "@prisma/client";
+import type { PlanFeatures } from "@/lib/plans";
 
-export type { Platform, AiProvider, WatermarkPosition } from "@prisma/client";
+export type { Platform, AiProvider, WatermarkPosition, Plan } from "@prisma/client";
+export type { PlanFeatures } from "@/lib/plans";
 
 export interface PlatformOutput {
   platform: Platform;
@@ -55,8 +57,21 @@ export interface ApiKeyStatus {
   maskedKey: string | null;
 }
 
+export interface BrandProfileSummary {
+  id: string;
+  name: string;
+  companyName: string | null;
+  businessDescription: string | null;
+  websiteUrl: string | null;
+  socialHandle: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SettingsResponse {
   defaultAiModel: string;
+  plan: Plan;
+  planFeatures: PlanFeatures;
   watermarkLogoUrl: string | null;
   watermarkPosition: WatermarkPosition;
   companyName: string | null;
@@ -64,6 +79,7 @@ export interface SettingsResponse {
   websiteUrl: string | null;
   socialHandle: string | null;
   apiKeys: ApiKeyStatus[];
+  brandProfiles: BrandProfileSummary[];
 }
 
 export interface GenerateResponse {

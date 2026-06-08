@@ -16,7 +16,19 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { KeyRound, ExternalLink, Save, ShieldCheck, ImageIcon, Trash2, Upload, Building2 } from "lucide-react";
+import { PlanBadge } from "@/components/subscription/PlanBadge";
+import { UpgradeBanner } from "@/components/subscription/UpgradeBanner";
+import {
+  KeyRound,
+  ExternalLink,
+  Save,
+  ShieldCheck,
+  ImageIcon,
+  Trash2,
+  Upload,
+  Building2,
+  RefreshCw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -65,6 +77,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   );
   const [websiteUrl, setWebsiteUrl] = useState(initialSettings.websiteUrl ?? "");
   const [socialHandle, setSocialHandle] = useState(initialSettings.socialHandle ?? "");
+  const [brandProfiles, setBrandProfiles] = useState(initialSettings.brandProfiles);
+  const [newProfileName, setNewProfileName] = useState("");
 
   const configuredKeys = Object.fromEntries(
     initialSettings.apiKeys.map((item) => [item.provider, item]),
@@ -72,6 +86,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
   const hasConfiguredKeys = initialSettings.apiKeys.some((item) => item.configured);
   const hasLiveModels = textModels.length > 0;
+  const { planFeatures } = initialSettings;
+  const canManageMultipleBrands = planFeatures.maxBrandProfiles > 1;
+  const allowedWatermarkOptions = WATERMARK_POSITION_OPTIONS.filter((option) =>
+    planFeatures.allowedWatermarkPositions.includes(option.value),
+  );
 
   useEffect(() => {
     const values = textModels.map((model) => model.value);
@@ -97,6 +116,10 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     initialSettings.socialHandle,
     initialSettings.websiteUrl,
   ]);
+
+  useEffect(() => {
+    setBrandProfiles(initialSettings.brandProfiles);
+  }, [initialSettings.brandProfiles]);
 
   const handleSaveKeys = () => {
     startTransition(async () => {
@@ -315,10 +338,124 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     });
   };
 
+  const handleCreateBrandProfile = () => {
+    if (!newProfileName.trim()) {
+      setError("Enter a name for the new brand profile.");
+      return;
+    }
+
+    startTransition(async () => {
+      setMessage(null);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/settings?action=brand-profile-create", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newProfileName.trim(),
+            companyName,
+            businessDescription,
+            websiteUrl,
+            socialHandle,
+          }),
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+          profile?: (typeof brandProfiles)[number];
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to save brand profile.");
+          return;
+        }
+
+        if (result.profile) {
+          setBrandProfiles((current) => [...current, result.profile!]);
+        }
+
+        setNewProfileName("");
+        setMessage(result.message ?? "Brand profile saved.");
+        router.refresh();
+      } catch {
+        setError("Failed to save brand profile.");
+      }
+    });
+  };
+
+  const handleSwitchBrandProfile = (profileId: string) => {
+    startTransition(async () => {
+      setMessage(null);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/settings?action=brand-profile-switch", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId }),
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to switch brand profile.");
+          return;
+        }
+
+        setMessage(result.message ?? "Brand profile switched.");
+        router.refresh();
+      } catch {
+        setError("Failed to switch brand profile.");
+      }
+    });
+  };
+
+  const handleDeleteBrandProfile = (profileId: string) => {
+    startTransition(async () => {
+      setMessage(null);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/settings?action=brand-profile-delete", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId }),
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          setError(result.error ?? result.message ?? "Failed to delete brand profile.");
+          return;
+        }
+
+        setBrandProfiles((current) => current.filter((profile) => profile.id !== profileId));
+        setMessage(result.message ?? "Brand profile deleted.");
+        router.refresh();
+      } catch {
+        setError("Failed to delete brand profile.");
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <p className="text-sm font-medium text-accent-text">Settings</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm font-medium text-accent-text">Settings</p>
+          <PlanBadge plan={initialSettings.plan} />
+        </div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           API keys & model preferences
         </h1>
@@ -509,16 +646,96 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           />
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap gap-3">
           <Button
             type="button"
             onClick={handleSaveBrandProfile}
             disabled={isPending}
           >
             <Save className="h-4 w-4" />
-            Save brand profile
+            Save active brand profile
           </Button>
         </div>
+
+        {!canManageMultipleBrands ? (
+          <p className="mt-4 text-xs text-muted">
+            Free and Pro plans include one brand profile. Upgrade to Agency to save
+            and switch between multiple companies.
+          </p>
+        ) : (
+          <div className="mt-6 space-y-4 rounded-xl border border-border bg-card-muted p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Saved brand profiles
+              </h3>
+              <p className="mt-1 text-xs text-muted">
+                Store multiple client brands and switch the active context for
+                generation.
+              </p>
+            </div>
+
+            {brandProfiles.length > 0 ? (
+              <ul className="space-y-2">
+                {brandProfiles.map((profile) => (
+                  <li
+                    key={profile.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {profile.name}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {profile.companyName ?? "No company name"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleSwitchBrandProfile(profile.id)}
+                        disabled={isPending}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Switch
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteBrandProfile(profile.id)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted">No saved profiles yet.</p>
+            )}
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Input
+                label="New profile name"
+                placeholder="Client brand name"
+                value={newProfileName}
+                onChange={(event) => setNewProfileName(event.target.value)}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleCreateBrandProfile}
+                disabled={isPending}
+              >
+                <Save className="h-4 w-4" />
+                Save as new profile
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card
@@ -588,6 +805,17 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           </div>
         </div>
 
+        {!planFeatures.canCustomizeWatermarkPosition ? (
+          <div className="mt-5">
+            <UpgradeBanner
+              title="Custom watermark placement is a Pro feature"
+              description="Free plan uses the default bottom-right watermark position. Upgrade to Pro to place your logo in any corner or center."
+              requiredPlan="PRO"
+              className="mb-4"
+            />
+          </div>
+        ) : null}
+
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1">
             <Select
@@ -596,18 +824,23 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               onChange={(event) =>
                 setWatermarkPosition(event.target.value as WatermarkPosition)
               }
-              options={WATERMARK_POSITION_OPTIONS.map((option) => ({
+              options={allowedWatermarkOptions.map((option) => ({
                 value: option.value,
                 label: option.label,
               }))}
-              hint="Corner positions use 24px padding from the image edge."
+              disabled={!planFeatures.canCustomizeWatermarkPosition}
+              hint={
+                planFeatures.canCustomizeWatermarkPosition
+                  ? "Corner positions use 24px padding from the image edge."
+                  : "Upgrade to Pro to unlock additional watermark positions."
+              }
             />
           </div>
           <Button
             type="button"
             variant="secondary"
             onClick={handleSaveWatermarkPosition}
-            disabled={isPending}
+            disabled={isPending || !planFeatures.canCustomizeWatermarkPosition}
           >
             <Save className="h-4 w-4" />
             Save position

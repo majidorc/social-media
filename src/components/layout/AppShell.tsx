@@ -4,6 +4,7 @@ import { SidebarContent } from "@/components/layout/Sidebar";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { APP_NAME } from "@/lib/constants";
 import { notifyNewGenerationRequest } from "@/lib/generation-history-events";
+import type { Plan } from "@/types";
 import { cn } from "@/lib/utils";
 import { Menu, Plus, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,9 +17,10 @@ interface AppShellProps {
     email?: string | null;
     image?: string | null;
   } | null;
+  plan?: Plan;
 }
 
-export function AppShell({ children, user }: AppShellProps) {
+export function AppShell({ children, user, plan = "FREE" }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -91,6 +93,7 @@ export function AppShell({ children, user }: AppShellProps) {
           >
             <SidebarContent
               user={user}
+              plan={plan}
               showCloseButton
               onClose={() => setMobileOpen(false)}
               onNavigate={() => setMobileOpen(false)}
@@ -101,7 +104,7 @@ export function AppShell({ children, user }: AppShellProps) {
 
       <div className="lg:flex lg:min-h-screen">
         <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex">
-          <SidebarContent user={user} />
+          <SidebarContent user={user} plan={plan} />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col lg:pl-64">

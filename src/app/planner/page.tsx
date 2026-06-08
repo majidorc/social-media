@@ -2,18 +2,22 @@ export const dynamic = "force-dynamic";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ContentCalendar } from "@/components/planner/ContentCalendar";
+import { UpgradeBanner } from "@/components/subscription/UpgradeBanner";
 import { getScheduledWorkspacesForMonth } from "@/lib/actions/planner";
 import { getCurrentUser } from "@/lib/get-current-user";
+import { canUsePlanner, getEffectivePlan } from "@/lib/subscription";
 
 export default async function PlannerPage() {
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth() + 1;
 
-  const [user, items] = await Promise.all([
-    getCurrentUser(),
-    getScheduledWorkspacesForMonth(year, month),
-  ]);
+  const user = await getCurrentUser();
+  const plannerEnabled = canUsePlanner(user?.settings);
+
+  const items = plannerEnabled
+    ? await getScheduledWorkspacesForMonth(year, month)
+    : [];
 
   return (
     <AppShell
@@ -22,6 +26,7 @@ export default async function PlannerPage() {
           ? { name: user.name, email: user.email, image: user.image }
           : null
       }
+      plan={getEffectivePlan(user?.settings)}
     >
       <div className="space-y-4 sm:space-y-6">
         <header className="space-y-1.5 sm:space-y-2">
@@ -36,11 +41,19 @@ export default async function PlannerPage() {
           </p>
         </header>
 
-        <ContentCalendar
-          initialYear={year}
-          initialMonth={month}
-          initialItems={items}
-        />
+        {!plannerEnabled ? (
+          <UpgradeBanner
+            title="Unlock the content planner"
+            description="Upgrade to Pro to schedule posts on a visual editorial calendar, track publishing dates, and manage your content pipeline from one place."
+            requiredPlan="PRO"
+          />
+        ) : (
+          <ContentCalendar
+            initialYear={year}
+            initialMonth={month}
+            initialItems={items}
+          />
+        )}
       </div>
     </AppShell>
   );

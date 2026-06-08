@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireCurrentUser } from "@/lib/get-current-user";
+import { prisma } from "@/lib/prisma";
+import { canUsePlanner } from "@/lib/subscription";
 import {
   formatScheduledDate,
   getMonthBoundsUtc,
   parseDateInput,
 } from "@/lib/planner-calendar";
-import { prisma } from "@/lib/prisma";
 import { parseGenerationOutputs } from "@/lib/workspace-history";
 import { toScheduledWorkspaceItem } from "@/lib/workspace-planner";
 import type { ScheduleWorkspaceResult, ScheduledWorkspaceItem } from "@/types";
@@ -33,6 +34,19 @@ export async function scheduleWorkspace(
 
   try {
     const user = await requireCurrentUser();
+    const settings = await prisma.userSettings.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id },
+      update: {},
+    });
+
+    if (!canUsePlanner(settings)) {
+      return {
+        success: false,
+        message: "Upgrade to Pro to schedule posts on the content planner.",
+      };
+    }
+
     const scheduledDate = parseDateInput(parsed.data.scheduledFor);
 
     const existing = await prisma.contentWorkspace.findFirst({
@@ -114,6 +128,15 @@ export async function getScheduledWorkspacesForMonth(
   month: number,
 ): Promise<ScheduledWorkspaceItem[]> {
   const user = await requireCurrentUser();
+  const settings = await prisma.userSettings.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id },
+    update: {},
+  });
+
+  if (!canUsePlanner(settings)) {
+    return [];
+  }
 
   if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
     throw new Error("Invalid month selection.");

@@ -7,12 +7,28 @@ import { PLATFORM_OPTIONS } from "@/lib/constants";
 interface PlatformSelectorProps {
   selected: Platform[];
   onChange: (platforms: Platform[]) => void;
+  maxPlatforms?: number;
 }
 
-export function PlatformSelector({ selected, onChange }: PlatformSelectorProps) {
+export function PlatformSelector({
+  selected,
+  onChange,
+  maxPlatforms = 6,
+}: PlatformSelectorProps) {
+  const singlePlatformMode = maxPlatforms <= 1;
+
   const togglePlatform = (platform: Platform) => {
+    if (singlePlatformMode) {
+      onChange([platform]);
+      return;
+    }
+
     if (selected.includes(platform)) {
       onChange(selected.filter((item) => item !== platform));
+      return;
+    }
+
+    if (selected.length >= maxPlatforms) {
       return;
     }
 
@@ -22,8 +38,9 @@ export function PlatformSelector({ selected, onChange }: PlatformSelectorProps) 
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-violet-500/20 bg-accent-soft px-4 py-3 text-xs leading-relaxed text-accent-text">
-        Select multiple platforms to receive tailored outputs — e.g. Twitter
-        respects character limits, Instagram includes hooks and CapCut scripts.
+        {singlePlatformMode
+          ? "Free plan supports one platform per generation. Upgrade to Pro for multi-platform output."
+          : "Select multiple platforms to receive tailored outputs — e.g. Twitter respects character limits, Instagram includes hooks and CapCut scripts."}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {PLATFORM_OPTIONS.map((platform) => (

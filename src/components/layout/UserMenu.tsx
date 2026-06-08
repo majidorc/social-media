@@ -1,5 +1,7 @@
 "use client";
 
+import { PlanBadge } from "@/components/subscription/PlanBadge";
+import type { Plan } from "@/types";
 import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 
@@ -7,9 +9,10 @@ interface UserMenuProps {
   name?: string | null;
   email?: string | null;
   image?: string | null;
+  plan?: Plan;
 }
 
-export function UserMenu({ name, email, image }: UserMenuProps) {
+export function UserMenu({ name, email, image, plan = "FREE" }: UserMenuProps) {
   return (
     <div>
       <div className="mb-2 flex items-center gap-3 rounded-xl bg-card-muted p-3">
@@ -29,9 +32,12 @@ export function UserMenu({ name, email, image }: UserMenuProps) {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">
-            {name ?? "Signed in"}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium text-foreground">
+              {name ?? "Signed in"}
+            </p>
+            <PlanBadge plan={plan} />
+          </div>
           {email ? (
             <p className="truncate text-xs text-muted">{email}</p>
           ) : null}

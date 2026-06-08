@@ -30,6 +30,12 @@ enum WatermarkPosition {
   CENTER
 }
 
+enum Plan {
+  FREE
+  PRO
+  AGENCY
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -44,6 +50,7 @@ model User {
   apiKeys           ApiKey[]
   contentWorkspaces ContentWorkspace[]
   settings          UserSettings?
+  brandProfiles     BrandProfile[]
 }
 
 model Account {
@@ -86,6 +93,9 @@ model UserSettings {
   userId            String   @unique
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   defaultAiModel     String             @default("gpt-4o")
+  plan                  Plan               @default(FREE)
+  stripeCustomerId      String?
+  planExpiresAt         DateTime?
   watermarkLogoUrl      String?            @db.Text
   watermarkPosition     WatermarkPosition  @default(BOTTOM_RIGHT)
   companyName           String?
@@ -94,6 +104,21 @@ model UserSettings {
   socialHandle          String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
+}
+
+model BrandProfile {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  companyName         String?
+  businessDescription String?  @db.Text
+  websiteUrl          String?
+  socialHandle        String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model ApiKey {

@@ -74,14 +74,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (pathname === "/" && !isLoggedIn) {
-    return withOptionalCookieCleanup(
-      request,
-      NextResponse.redirect(new URL("/login", request.url)),
-      token,
-    );
-  }
-
   return withOptionalCookieCleanup(request, NextResponse.next(), token);
 }
 

@@ -34,6 +34,7 @@ interface OutputPanelProps {
   outputs: GenerationOutputs | null;
   isLoading: boolean;
   error: string | null;
+  canSchedule?: boolean;
 }
 
 type OutputTab = "platforms" | "video-script";
@@ -45,6 +46,7 @@ export function OutputPanel({
   outputs,
   isLoading,
   error,
+  canSchedule = true,
 }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<OutputTab>("platforms");
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
@@ -369,6 +371,7 @@ export function OutputPanel({
             workspaceId={workspaceId}
             scheduledFor={scheduledFor}
             onScheduledChange={onScheduledChange}
+            canSchedule={canSchedule}
           />
         </div>
       )}

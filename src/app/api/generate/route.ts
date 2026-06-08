@@ -13,6 +13,10 @@ import { imageModelSchema, textModelSchema } from "@/lib/ai/models";
 import { getDefaultModel, getSettings } from "@/lib/actions/settings";
 import { requireCurrentUser } from "@/lib/get-current-user";
 import { prisma } from "@/lib/prisma";
+import {
+  getHistoryCutoffDate,
+  resolveUserPlanFeatures,
+} from "@/lib/subscription";
 import { toWorkspaceHistoryItem } from "@/lib/workspace-history";
 import { deleteAllWorkspacesForUser } from "@/lib/workspace-delete";
 import type {
@@ -64,6 +68,27 @@ export async function POST(request: Request) {
     }
 
     const user = await requireCurrentUser();
+    const userSettings =
+      user.settings ??
+      (await prisma.userSettings.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id },
+        update: {},
+      }));
+    const planFeatures = resolveUserPlanFeatures(userSettings);
+
+    if (parsed.data.platforms.length > planFeatures.maxPlatforms) {
+      return NextResponse.json(
+        {
+          error:
+            planFeatures.maxPlatforms === 1
+              ? "Free plan supports one platform per generation. Upgrade to Pro for multi-platform output."
+              : "Too many platforms selected for your plan.",
+        },
+        { status: 403 },
+      );
+    }
+
     const [settings, resolvedDefault] = await Promise.all([
       getSettings(),
       getDefaultModel(),
@@ -188,9 +213,20 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const user = await requireCurrentUser();
+    const userSettings =
+      user.settings ??
+      (await prisma.userSettings.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id },
+        update: {},
+      }));
+    const historyCutoff = getHistoryCutoffDate(userSettings);
 
     const history = await prisma.contentWorkspace.findMany({
-      where: { userId: user.id },
+      where: {
+        userId: user.id,
+        ...(historyCutoff ? { createdAt: { gte: historyCutoff } } : {}),
+      },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {

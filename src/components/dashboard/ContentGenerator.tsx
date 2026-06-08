@@ -18,7 +18,12 @@ import {
   notifyGenerationHistoryUpdated,
   type GenerationHistoryDeletedDetail,
 } from "@/lib/generation-history-events";
-import type { GenerateResponse, GenerationOutputs, WorkspaceDetailResponse } from "@/types";
+import type {
+  GenerateResponse,
+  GenerationOutputs,
+  PlanFeatures,
+  WorkspaceDetailResponse,
+} from "@/types";
 import Link from "next/link";
 import { Loader2, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -27,9 +32,13 @@ import { cn } from "@/lib/utils";
 
 interface ContentGeneratorProps {
   defaultModel: string | null;
+  planFeatures: PlanFeatures;
 }
 
-export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
+export function ContentGenerator({
+  defaultModel,
+  planFeatures,
+}: ContentGeneratorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workspaceId = searchParams.get("workspace");
@@ -48,7 +57,9 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
   const [videoUrl, setVideoUrl] = useState("");
   const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [videoFileName, setVideoFileName] = useState<string | null>(null);
-  const [platforms, setPlatforms] = useState<Platform[]>(["INSTAGRAM", "TWITTER"]);
+  const [platforms, setPlatforms] = useState<Platform[]>(
+    planFeatures.maxPlatforms <= 1 ? ["INSTAGRAM"] : ["INSTAGRAM", "TWITTER"],
+  );
   const [modelOverride, setModelOverride] = useState("");
   const [imageModel, setImageModel] = useState("");
   const [enableVideo, setEnableVideo] = useState(false);
@@ -66,7 +77,9 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     setVideoUrl("");
     setImageFileName(null);
     setVideoFileName(null);
-    setPlatforms(["INSTAGRAM", "TWITTER"]);
+    setPlatforms(
+      planFeatures.maxPlatforms <= 1 ? ["INSTAGRAM"] : ["INSTAGRAM", "TWITTER"],
+    );
     setModelOverride("");
     setImageModel("");
     setEnableVideo(false);
@@ -75,7 +88,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
     setIsInputsExpanded(true);
     setScheduledFor(null);
     loadedWorkspaceRef.current = null;
-  }, []);
+  }, [planFeatures.maxPlatforms]);
 
   const applyWorkspace = useCallback((workspace: WorkspaceDetailResponse["workspace"]) => {
     setIdea(workspace.idea ?? "");
@@ -362,7 +375,11 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
             description="Choose one or more destinations for your content."
             className="border-0 bg-transparent p-0 shadow-none"
           >
-            <PlatformSelector selected={platforms} onChange={setPlatforms} />
+            <PlatformSelector
+              selected={platforms}
+              onChange={setPlatforms}
+              maxPlatforms={planFeatures.maxPlatforms}
+            />
           </Card>
 
           <Card
@@ -424,6 +441,7 @@ export function ContentGenerator({ defaultModel }: ContentGeneratorProps) {
             outputs={outputs}
             isLoading={isLoading || isLoadingHistory}
             error={error}
+            canSchedule={planFeatures.canUsePlanner}
           />
       </div>
     </div>

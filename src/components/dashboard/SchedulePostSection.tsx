@@ -9,18 +9,21 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/ui/Toast";
 import { CalendarClock, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 
 interface SchedulePostSectionProps {
   workspaceId: string | null;
   scheduledFor: string | null;
   onScheduledChange?: (scheduledFor: string | null) => void;
+  canSchedule?: boolean;
 }
 
 export function SchedulePostSection({
   workspaceId,
   scheduledFor,
   onScheduledChange,
+  canSchedule = true,
 }: SchedulePostSectionProps) {
   const [dateValue, setDateValue] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -83,6 +86,33 @@ export function SchedulePostSection({
       showToast(result.message, "success");
     });
   };
+
+  if (!canSchedule) {
+    return (
+      <section className="rounded-xl border border-border bg-card-muted p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-text">
+            <CalendarClock className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              Content planner is a Pro feature
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              Upgrade to Pro to schedule posts and manage them on your editorial
+              calendar.
+            </p>
+            <Link
+              href="/#pricing"
+              className="mt-3 inline-flex text-xs font-medium text-accent-text underline underline-offset-2"
+            >
+              View pricing
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <>

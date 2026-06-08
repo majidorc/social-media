@@ -77,9 +77,13 @@ async function postGoogleSignIn(callbackUrl: string) {
 
 interface GoogleSignInButtonProps {
   authConfigured: boolean;
+  label?: string;
 }
 
-export function GoogleSignInButton({ authConfigured }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({
+  authConfigured,
+  label = "Continue with Google",
+}: GoogleSignInButtonProps) {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -131,7 +135,7 @@ export function GoogleSignInButton({ authConfigured }: GoogleSignInButtonProps) 
             />
           </svg>
         )}
-        Continue with Google
+        {label}
       </button>
       {actionError ? (
         <p className="mt-3 text-center text-sm text-red-300">{actionError}</p>
@@ -168,16 +172,16 @@ export function LoginCard({ authConfigured }: LoginCardProps) {
   }, [errorCode, router, searchParams]);
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl shadow-black/10 sm:p-8 dark:shadow-violet-950/20">
+    <div className="w-full max-w-md rounded-2xl border border-violet-500/20 bg-card/90 p-6 shadow-xl shadow-violet-500/10 backdrop-blur sm:p-8">
       <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600/20 text-violet-400">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/30 to-violet-500/10 text-violet-400">
           <Sparkles className="h-7 w-7" />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Sign in to {APP_NAME}
+          Welcome back
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Use your Google account to access the content generator and settings.
+          Continue with Google to access your {APP_NAME} workspace.
         </p>
       </div>
 
@@ -201,7 +205,10 @@ export function LoginCard({ authConfigured }: LoginCardProps) {
         </div>
       ) : null}
 
-      <GoogleSignInButton authConfigured={authConfigured} />
+      <GoogleSignInButton
+        authConfigured={authConfigured}
+        label="Continue with Google"
+      />
 
       <p className="mt-6 text-center text-xs leading-relaxed text-muted">
         Google is the only sign-in option. Your API keys and generated content

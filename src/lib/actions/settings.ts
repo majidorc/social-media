@@ -15,7 +15,14 @@ import {
 import { findModelOption, textModelSchema } from "@/lib/ai/models";
 import { resolveWatermarkPosition } from "@/lib/watermark-position";
 import { normalizeBrandProfileField } from "@/lib/brand-profile";
-import type { ApiKeyStatus, SettingsResponse } from "@/types";
+import {
+  getEffectivePlan,
+  getMaxBrandProfiles,
+  isWatermarkPositionAllowed,
+  resolveAllowedWatermarkPosition,
+  resolveUserPlanFeatures,
+} from "@/lib/subscription";
+import type { ApiKeyStatus, BrandProfileSummary, SettingsResponse } from "@/types";
 
 const MAX_WATERMARK_BYTES = 2 * 1024 * 1024;
 
@@ -52,6 +59,32 @@ const saveBrandProfileSchema = z.object({
   socialHandle: z.string().trim().max(100).optional(),
 });
 
+const createBrandProfileSchema = saveBrandProfileSchema.extend({
+  name: z.string().trim().min(1, "Enter a profile name.").max(100),
+});
+
+function toBrandProfileSummary(profile: {
+  id: string;
+  name: string;
+  companyName: string | null;
+  businessDescription: string | null;
+  websiteUrl: string | null;
+  socialHandle: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): BrandProfileSummary {
+  return {
+    id: profile.id,
+    name: profile.name,
+    companyName: profile.companyName,
+    businessDescription: profile.businessDescription,
+    websiteUrl: profile.websiteUrl,
+    socialHandle: profile.socialHandle,
+    createdAt: profile.createdAt.toISOString(),
+    updatedAt: profile.updatedAt.toISOString(),
+  };
+}
+
 export async function getSettings(): Promise<SettingsResponse> {
   const user = await requireCurrentUser();
 
@@ -61,9 +94,18 @@ export async function getSettings(): Promise<SettingsResponse> {
     update: {},
   });
 
-  const apiKeys = await prisma.apiKey.findMany({
-    where: { userId: user.id },
-  });
+  const [apiKeys, brandProfiles] = await Promise.all([
+    prisma.apiKey.findMany({
+      where: { userId: user.id },
+    }),
+    prisma.brandProfile.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const plan = getEffectivePlan(settings);
+  const planFeatures = resolveUserPlanFeatures(settings);
 
   const apiKeyStatuses: ApiKeyStatus[] = API_KEY_PROVIDERS.map(({ provider }) => {
     const record = apiKeys.find((key) => key.provider === provider);
@@ -82,13 +124,19 @@ export async function getSettings(): Promise<SettingsResponse> {
 
   return {
     defaultAiModel: settings.defaultAiModel,
+    plan,
+    planFeatures,
     watermarkLogoUrl: settings.watermarkLogoUrl,
-    watermarkPosition: resolveWatermarkPosition(settings.watermarkPosition),
+    watermarkPosition: resolveAllowedWatermarkPosition(
+      settings,
+      resolveWatermarkPosition(settings.watermarkPosition),
+    ),
     companyName: settings.companyName,
     businessDescription: settings.businessDescription,
     websiteUrl: settings.websiteUrl,
     socialHandle: settings.socialHandle,
     apiKeys: apiKeyStatuses,
+    brandProfiles: brandProfiles.map(toBrandProfileSummary),
   };
 }
 
@@ -276,16 +324,24 @@ export async function saveWatermarkPosition(
   }
 
   const user = await requireCurrentUser();
-
-  await prisma.userSettings.upsert({
+  const settings = await prisma.userSettings.upsert({
     where: { userId: user.id },
-    create: {
-      userId: user.id,
-      watermarkPosition: parsed.data,
-    },
-    update: {
-      watermarkPosition: parsed.data,
-    },
+    create: { userId: user.id },
+    update: {},
+  });
+
+  if (!isWatermarkPositionAllowed(settings, parsed.data)) {
+    return {
+      success: false,
+      message: "Upgrade to Pro to customize watermark placement.",
+    };
+  }
+
+  const resolvedPosition = resolveAllowedWatermarkPosition(settings, parsed.data);
+
+  await prisma.userSettings.update({
+    where: { userId: user.id },
+    data: { watermarkPosition: resolvedPosition },
   });
 
   revalidatePath("/settings");
@@ -294,7 +350,7 @@ export async function saveWatermarkPosition(
   return {
     success: true,
     message: "Watermark position updated.",
-    watermarkPosition: parsed.data,
+    watermarkPosition: resolvedPosition,
   };
 }
 
@@ -337,3 +393,138 @@ export async function saveBrandProfile(
     message: "Brand profile saved. Future generations will use this context.",
   };
 }
+
+export async function createBrandProfile(
+  input: z.infer<typeof createBrandProfileSchema>,
+): Promise<{ success: boolean; message: string; profile?: BrandProfileSummary }> {
+  const parsed = createBrandProfileSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid brand profile.",
+    };
+  }
+
+  const user = await requireCurrentUser();
+  const settings = await prisma.userSettings.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id },
+    update: {},
+  });
+
+  if (getMaxBrandProfiles(settings) <= 1) {
+    return {
+      success: false,
+      message: "Upgrade to Agency to save multiple brand profiles.",
+    };
+  }
+
+  const existingCount = await prisma.brandProfile.count({
+    where: { userId: user.id },
+  });
+
+  if (existingCount >= getMaxBrandProfiles(settings)) {
+    return {
+      success: false,
+      message: "You have reached the brand profile limit for your plan.",
+    };
+  }
+
+  const profile = await prisma.brandProfile.create({
+    data: {
+      userId: user.id,
+      name: parsed.data.name,
+      companyName: normalizeBrandProfileField(parsed.data.companyName),
+      businessDescription: normalizeBrandProfileField(parsed.data.businessDescription),
+      websiteUrl: normalizeBrandProfileField(parsed.data.websiteUrl),
+      socialHandle: normalizeBrandProfileField(parsed.data.socialHandle),
+    },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: "Brand profile saved.",
+    profile: toBrandProfileSummary(profile),
+  };
+}
+
+export async function switchBrandProfile(
+  profileId: string,
+): Promise<{ success: boolean; message: string }> {
+  const user = await requireCurrentUser();
+  const settings = await prisma.userSettings.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id },
+    update: {},
+  });
+
+  if (getMaxBrandProfiles(settings) <= 1) {
+    return {
+      success: false,
+      message: "Upgrade to Agency to switch between brand profiles.",
+    };
+  }
+
+  const profile = await prisma.brandProfile.findFirst({
+    where: {
+      id: profileId,
+      userId: user.id,
+    },
+  });
+
+  if (!profile) {
+    return { success: false, message: "Brand profile not found." };
+  }
+
+  await prisma.userSettings.update({
+    where: { userId: user.id },
+    data: {
+      companyName: profile.companyName,
+      businessDescription: profile.businessDescription,
+      websiteUrl: profile.websiteUrl,
+      socialHandle: profile.socialHandle,
+    },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: `Switched to ${profile.name}.`,
+  };
+}
+
+export async function deleteBrandProfile(
+  profileId: string,
+): Promise<{ success: boolean; message: string }> {
+  const user = await requireCurrentUser();
+
+  const profile = await prisma.brandProfile.findFirst({
+    where: {
+      id: profileId,
+      userId: user.id,
+    },
+  });
+
+  if (!profile) {
+    return { success: false, message: "Brand profile not found." };
+  }
+
+  await prisma.brandProfile.delete({
+    where: { id: profile.id },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: "Brand profile deleted.",
+  };
+}
+
