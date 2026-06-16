@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ContentCalendar } from "@/components/planner/ContentCalendar";
+import { PlannerNotificationBanner } from "@/components/planner/PlannerNotificationBanner";
 import { UpgradeBanner } from "@/components/subscription/UpgradeBanner";
 import { getScheduledWorkspacesForMonth } from "@/lib/actions/planner";
 import { isAdminRole } from "@/lib/admin";
@@ -50,11 +51,14 @@ export default async function PlannerPage() {
             requiredPlan="PRO"
           />
         ) : (
-          <ContentCalendar
-            initialYear={year}
-            initialMonth={month}
-            initialItems={items}
-          />
+          <>
+            <PlannerNotificationBanner items={items} />
+            <ContentCalendar
+              initialYear={year}
+              initialMonth={month}
+              initialItems={items}
+            />
+          </>
         )}
       </div>
     </AppShell>

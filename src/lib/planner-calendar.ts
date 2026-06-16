@@ -53,3 +53,23 @@ export function getCalendarCells(year: number, month: number): (number | null)[]
 export function scheduledDateKey(date: Date | string): string {
   return toDateInputValue(typeof date === "string" ? new Date(date) : date);
 }
+
+export function getTodayUtcDateKey(): string {
+  return toDateInputValue(new Date());
+}
+
+export function getDayBoundsUtc(year: number, month: number, day: number) {
+  return {
+    start: new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0)),
+    end: new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999)),
+  };
+}
+
+export function getTodayUtcParts() {
+  const now = new Date();
+  return {
+    year: now.getUTCFullYear(),
+    month: now.getUTCMonth() + 1,
+    day: now.getUTCDate(),
+  };
+}

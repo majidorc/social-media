@@ -5,6 +5,7 @@ import {
   scheduleWorkspace,
 } from "@/lib/actions/planner";
 import { formatScheduledDate, toDateInputValue } from "@/lib/planner-calendar";
+import { notifyPostScheduled } from "@/lib/planner-notifications";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/ui/Toast";
@@ -65,6 +66,13 @@ export function SchedulePostSection({
 
       onScheduledChange?.(result.scheduledFor ?? null);
       showToast(result.message, "success");
+
+      if (result.scheduledFor) {
+        notifyPostScheduled(
+          "Your content",
+          formatScheduledDate(result.scheduledFor),
+        );
+      }
     });
   };
 

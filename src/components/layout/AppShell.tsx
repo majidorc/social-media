@@ -2,7 +2,9 @@
 
 import { SidebarContent } from "@/components/layout/Sidebar";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { PlannerNotificationWatcher } from "@/components/planner/PlannerNotificationWatcher";
 import { APP_NAME } from "@/lib/constants";
+import { PLAN_FEATURES } from "@/lib/plans";
 import { notifyNewGenerationRequest } from "@/lib/generation-history-events";
 import type { Plan } from "@/types";
 import { cn } from "@/lib/utils";
@@ -58,8 +60,11 @@ export function AppShell({
     setMobileOpen(false);
   };
 
+  const plannerNotificationsEnabled = PLAN_FEATURES[plan].canUsePlanner;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {plannerNotificationsEnabled ? <PlannerNotificationWatcher /> : null}
       <header className="sticky top-0 z-40 flex items-center gap-2 border-b border-border bg-sidebar/95 px-3 py-3 backdrop-blur lg:hidden">
         <button
           type="button"
