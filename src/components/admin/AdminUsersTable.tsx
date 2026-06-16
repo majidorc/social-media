@@ -1,12 +1,11 @@
 "use client";
 
-import { PlanBadge } from "@/components/subscription/PlanBadge";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Toast } from "@/components/ui/Toast";
 import { getPlanLabel } from "@/lib/plans";
-import { getUserStatusLabel, USER_STATUS_OPTIONS } from "@/lib/user-status";
+import { getUserStatusLabel } from "@/lib/user-status";
 import { cn } from "@/lib/utils";
 import type {
   AdminUserRecord,
@@ -15,7 +14,7 @@ import type {
   Role,
   UserStatus,
 } from "@/types";
-import { Ban, Loader2, Shield, Trash2, UserCheck, UserX } from "lucide-react";
+import { Ban, Loader2, Trash2, UserCheck, UserX } from "lucide-react";
 import { useCallback, useEffect, useState, useTransition } from "react";
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
@@ -161,7 +160,6 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
           success?: boolean;
           message?: string;
           error?: string;
-          deletedUserId?: string;
         };
 
         if (!response.ok || !data.success) {
@@ -216,11 +214,7 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
                   Date Joined
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">
-                  Current Role
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Plan</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Manage</th>
+                <th className="px-4 py-3 text-left font-medium text-muted">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -257,25 +251,7 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
                       </span>
                     </td>
                     <td className="px-4 py-4 align-top">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                          user.role === "ADMIN"
-                            ? "border-violet-500/30 bg-accent-soft text-accent-text"
-                            : "border-border bg-card-muted text-muted",
-                        )}
-                      >
-                        {user.role === "ADMIN" ? (
-                          <Shield className="h-3 w-3" aria-hidden="true" />
-                        ) : null}
-                        {user.role === "ADMIN" ? "Admin" : "User"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 align-top">
-                      <PlanBadge plan={user.plan} />
-                    </td>
-                    <td className="px-4 py-4 align-top">
-                      <div className="flex min-w-[18rem] flex-col gap-3">
+                      <div className="flex min-w-[16rem] flex-col gap-3">
                         <div className="grid gap-3 sm:grid-cols-2">
                           <Select
                             label="Role"
@@ -306,21 +282,6 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
                             }))}
                           />
                         </div>
-
-                        <Select
-                          label="Account status"
-                          value={user.status}
-                          disabled={isUpdating || locked}
-                          onChange={(event) =>
-                            updateUser(user.id, {
-                              status: event.target.value as UserStatus,
-                            })
-                          }
-                          options={USER_STATUS_OPTIONS.map((option) => ({
-                            value: option.value,
-                            label: option.label,
-                          }))}
-                        />
 
                         <div className="flex flex-wrap gap-2">
                           {user.status !== "ACTIVE" && !locked ? (
