@@ -7,9 +7,10 @@ interface CardProps {
   description?: string;
   children: ReactNode;
   className?: string;
+  actions?: ReactNode;
 }
 
-export function Card({ title, description, children, className }: CardProps) {
+export function Card({ title, description, children, className, actions }: CardProps) {
   return (
     <section
       className={cn(
@@ -17,14 +18,17 @@ export function Card({ title, description, children, className }: CardProps) {
         className,
       )}
     >
-      {(title || description) && (
-        <header className="mb-4 space-y-1">
-          {title ? (
-            <h2 className="text-base font-semibold text-foreground">{title}</h2>
-          ) : null}
-          {description ? (
-            <p className="text-sm text-muted">{description}</p>
-          ) : null}
+      {(title || description || actions) && (
+        <header className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            {title ? (
+              <h2 className="text-base font-semibold text-foreground">{title}</h2>
+            ) : null}
+            {description ? (
+              <p className="text-sm text-muted">{description}</p>
+            ) : null}
+          </div>
+          {actions ? <div className="shrink-0">{actions}</div> : null}
         </header>
       )}
       {children}

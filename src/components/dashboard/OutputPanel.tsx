@@ -10,23 +10,30 @@ import {
   getTotalTokenCount,
 } from "@/lib/ai/cost-calculator";
 import { cn } from "@/lib/utils";
-import { PLATFORM_OPTIONS } from "@/lib/constants";
+import { PLATFORM_OPTIONS, PLATFORM_SHORT_LABELS } from "@/lib/constants";
 import {
   buildImageDownloadFilename,
   downloadImageAsset,
 } from "@/lib/download-image";
+import {
+  getPlatformShareLabel,
+  sharePlatformContent,
+} from "@/lib/platform-share";
 import type { GenerationOutputs } from "@/types";
+import type { Platform } from "@prisma/client";
 import {
   Copy,
   Download,
   ImageIcon,
   Loader2,
+  Share2,
   Sparkles,
   Video,
 } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SchedulePostSection } from "@/components/dashboard/SchedulePostSection";
+import { Toast } from "@/components/ui/Toast";
 
 interface OutputPanelProps {
   workspaceId: string | null;
@@ -50,12 +57,48 @@ export function OutputPanel({
   canSchedule = true,
 }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<OutputTab>("platforms");
+  const [activePlatform, setActivePlatform] = useState<Platform | null>(null);
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [copiedVideoScript, setCopiedVideoScript] = useState(false);
   const [copiedVoiceover, setCopiedVoiceover] = useState(false);
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+  const [shareToastVariant, setShareToastVariant] = useState<"success" | "error">(
+    "success",
+  );
+
+  const activePlatformOutput = useMemo(() => {
+    if (!outputs || !activePlatform) {
+      return outputs?.platforms[0] ?? null;
+    }
+
+    return (
+      outputs.platforms.find((item) => item.platform === activePlatform) ??
+      outputs.platforms[0] ??
+      null
+    );
+  }, [activePlatform, outputs]);
+
+  useEffect(() => {
+    if (!outputs?.platforms.length) {
+      setActivePlatform(null);
+      return;
+    }
+
+    setActivePlatform((current) => {
+      if (
+        current &&
+        outputs.platforms.some((item) => item.platform === current)
+      ) {
+        return current;
+      }
+
+      return outputs.platforms[0].platform;
+    });
+  }, [outputs]);
 
   const copyContent = async (platform: string, content: string) => {
     await navigator.clipboard.writeText(content);
@@ -85,16 +128,59 @@ export function OutputPanel({
     }
   };
 
+  const handleSharePlatform = async (platform: Platform, content: string) => {
+    setIsSharing(true);
+    setShareToast(null);
+
+    try {
+      const result = await sharePlatformContent(platform, content, {
+        imageUrl: outputs?.visuals?.imageUrl ?? null,
+      });
+
+      setShareToastVariant(result.success ? "success" : "error");
+      setShareToast(result.message);
+    } catch {
+      setShareToastVariant("error");
+      setShareToast("Could not share this post. Try copying instead.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   const imageModelLabel = outputs?.visuals?.imageModel ?? null;
   const hasVideoScript = Boolean(
     outputs?.video?.script?.trim() || outputs?.video?.voiceoverCopy?.trim(),
   );
 
   return (
+    <>
     <Card
       title="Generated outputs"
       description="Platform copy, optional graphics, and video scripts appear here after generation."
       className="h-full"
+      actions={
+        outputs && activeTab === "platforms" && activePlatformOutput ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSharing}
+            onClick={() =>
+              void handleSharePlatform(
+                activePlatformOutput.platform,
+                activePlatformOutput.content,
+              )
+            }
+            className="shrink-0"
+          >
+            {isSharing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Share2 className="h-4 w-4" />
+            )}
+            {getPlatformShareLabel(activePlatformOutput.platform)}
+          </Button>
+        ) : null
+      }
     >
       {isLoading ? (
         <div className="flex min-h-60 flex-col items-center justify-center gap-3 text-muted sm:min-h-80">
@@ -297,41 +383,85 @@ export function OutputPanel({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {outputs.platforms.map((item) => {
-                    const label =
-                      PLATFORM_OPTIONS.find(
-                        (option) => option.value === item.platform,
-                      )?.label ?? item.platform;
+                  {outputs.platforms.length > 1 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {outputs.platforms.map((item) => {
+                        const isActive = activePlatformOutput?.platform === item.platform;
+                        const shortLabel =
+                          PLATFORM_SHORT_LABELS[item.platform] ?? item.platform;
 
-                    return (
-                      <article
-                        key={item.platform}
-                        className="rounded-xl border border-border bg-card-muted p-4"
-                      >
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-foreground">
-                              {label}
-                            </h3>
-                            <Badge>{item.platform}</Badge>
-                          </div>
+                        return (
+                          <button
+                            key={item.platform}
+                            type="button"
+                            onClick={() => setActivePlatform(item.platform)}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                              isActive
+                                ? "border-violet-500/40 bg-accent-soft text-accent-text"
+                                : "border-border bg-card-muted text-muted hover:border-violet-500/25 hover:text-foreground",
+                            )}
+                          >
+                            {shortLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {activePlatformOutput ? (
+                    <article className="rounded-xl border border-border bg-card-muted p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold text-foreground">
+                            {PLATFORM_OPTIONS.find(
+                              (option) => option.value === activePlatformOutput.platform,
+                            )?.label ?? activePlatformOutput.platform}
+                          </h3>
+                          <Badge>{activePlatformOutput.platform}</Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() =>
-                              void copyContent(item.platform, item.content)
+                              void copyContent(
+                                activePlatformOutput.platform,
+                                activePlatformOutput.content,
+                              )
                             }
                             className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
                           >
                             <Copy className="h-3.5 w-3.5" />
-                            {copiedPlatform === item.platform ? "Copied" : "Copy"}
+                            {copiedPlatform === activePlatformOutput.platform
+                              ? "Copied"
+                              : "Copy"}
                           </button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={isSharing}
+                            onClick={() =>
+                              void handleSharePlatform(
+                                activePlatformOutput.platform,
+                                activePlatformOutput.content,
+                              )
+                            }
+                          >
+                            {isSharing ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Share2 className="h-3.5 w-3.5" />
+                            )}
+                            Share
+                          </Button>
                         </div>
-                        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
-                          {item.content}
-                        </pre>
-                      </article>
-                    );
-                  })}
+                      </div>
+                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
+                        {activePlatformOutput.content}
+                      </pre>
+                    </article>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -377,5 +507,11 @@ export function OutputPanel({
         </div>
       )}
     </Card>
+    <Toast
+      message={shareToast}
+      variant={shareToastVariant}
+      onDismiss={() => setShareToast(null)}
+    />
+    </>
   );
 }
