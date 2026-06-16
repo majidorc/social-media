@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth-cookies";
 import { ensureOwnerAdminRole } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { isUserAccessBlocked } from "@/lib/user-status";
 
 function normalizeAppUrl(url: string | undefined): string {
   return (url ?? "http://localhost:3000").replace(/\/$/, "");
@@ -87,7 +88,27 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
+      if (user.email) {
+        const existingByEmail = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { id: true, status: true },
+        });
+
+        if (existingByEmail && isUserAccessBlocked(existingByEmail.status)) {
+          return false;
+        }
+      }
+
       if (user.id) {
+        const existingById = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { status: true },
+        });
+
+        if (existingById && isUserAccessBlocked(existingById.status)) {
+          return false;
+        }
+
         await ensureUserSettings(user.id);
         await ensureOwnerAdminRole(user.id, user.email);
       }
@@ -102,9 +123,10 @@ export const authOptions: NextAuthOptions = {
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id },
-          select: { role: true },
+          select: { role: true, status: true },
         });
         token.role = dbUser?.role ?? "USER";
+        token.status = dbUser?.status ?? "ACTIVE";
       }
 
       return token;
@@ -113,6 +135,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user && token.id) {
         session.user.id = token.id;
         session.user.role = token.role ?? "USER";
+        session.user.status = token.status ?? "ACTIVE";
       }
 
       return session;

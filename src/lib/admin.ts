@@ -50,3 +50,22 @@ export async function requireAdminUser() {
 
   return user;
 }
+
+interface AdminTargetUser {
+  id: string;
+  email: string | null;
+}
+
+export function assertAdminCanModifyTarget(
+  adminId: string,
+  target: AdminTargetUser,
+  action: "delete" | "ban" | "deactivate" | "change",
+): void {
+  if (target.id === adminId) {
+    throw new Error(`You cannot ${action} your own account.`);
+  }
+
+  if (isOwnerAdminEmail(target.email)) {
+    throw new Error("The owner admin account is protected.");
+  }
+}

@@ -98,6 +98,33 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  if (
+    isLoggedIn &&
+    token?.status &&
+    token.status !== "ACTIVE" &&
+    !pathname.startsWith("/api/auth")
+  ) {
+    if (pathname.startsWith("/api/")) {
+      return withOptionalCookieCleanup(
+        request,
+        NextResponse.json(
+          {
+            error:
+              token.status === "BANNED"
+                ? "This account has been banned."
+                : "This account has been deactivated.",
+          },
+          { status: 403 },
+        ),
+        token,
+      );
+    }
+
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", "AccessDenied");
+    return withOptionalCookieCleanup(request, NextResponse.redirect(loginUrl), token);
+  }
+
   return withOptionalCookieCleanup(request, NextResponse.next(), token);
 }
 

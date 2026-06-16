@@ -35,12 +35,12 @@ export default async function AdminPage() {
             User management
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-muted">
-            Review registered accounts, adjust subscription plans, and manage admin
-            access. Changes apply immediately.
+            Review registered accounts, adjust plans and roles, deactivate or ban
+            access, or permanently delete accounts. Changes apply immediately.
           </p>
         </header>
 
-        <AdminUsersTable />
+        <AdminUsersTable currentAdminId={user.id} />
       </div>
     </AppShell>
   );

@@ -2,11 +2,20 @@
 
 import { PlanBadge } from "@/components/subscription/PlanBadge";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Toast } from "@/components/ui/Toast";
 import { getPlanLabel } from "@/lib/plans";
-import type { AdminUserRecord, AdminUsersResponse, Plan, Role } from "@/types";
-import { Loader2, Shield } from "lucide-react";
+import { getUserStatusLabel, USER_STATUS_OPTIONS } from "@/lib/user-status";
+import { cn } from "@/lib/utils";
+import type {
+  AdminUserRecord,
+  AdminUsersResponse,
+  Plan,
+  Role,
+  UserStatus,
+} from "@/types";
+import { Ban, Loader2, Shield, Trash2, UserCheck, UserX } from "lucide-react";
 import { useCallback, useEffect, useState, useTransition } from "react";
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
@@ -28,7 +37,24 @@ function formatJoinedDate(isoDate: string): string {
   }).format(new Date(isoDate));
 }
 
-export function AdminUsersTable() {
+function statusBadgeClassName(status: UserStatus): string {
+  switch (status) {
+    case "ACTIVE":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+    case "DEACTIVATED":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200";
+    case "BANNED":
+      return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+    default:
+      return "border-border bg-card-muted text-muted";
+  }
+}
+
+interface AdminUsersTableProps {
+  currentAdminId: string;
+}
+
+export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +94,10 @@ export function AdminUsersTable() {
     void loadUsers();
   }, [loadUsers]);
 
-  const updateUser = (userId: string, patch: { role?: Role; plan?: Plan }) => {
+  const updateUser = (
+    userId: string,
+    patch: { role?: Role; plan?: Plan; status?: UserStatus },
+  ) => {
     setPendingUserId(userId);
 
     startTransition(async () => {
@@ -108,6 +137,55 @@ export function AdminUsersTable() {
     });
   };
 
+  const deleteUser = (user: AdminUserRecord) => {
+    const confirmed = window.confirm(
+      `Permanently delete ${user.email ?? user.name ?? "this user"}? This removes their workspaces, API keys, and billing data. This cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPendingUserId(user.id);
+
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/admin/users", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ userId: user.id }),
+        });
+
+        const data = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          error?: string;
+          deletedUserId?: string;
+        };
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error ?? data.message ?? "Failed to delete user.");
+        }
+
+        setUsers((current) => current.filter((item) => item.id !== user.id));
+        showToast(data.message ?? "User deleted.", "success");
+      } catch (deleteError) {
+        showToast(
+          deleteError instanceof Error
+            ? deleteError.message
+            : "Failed to delete user.",
+          "error",
+        );
+      } finally {
+        setPendingUserId(null);
+      }
+    });
+  };
+
+  const isRowLocked = (user: AdminUserRecord) =>
+    user.isProtected || user.id === currentAdminId;
+
   if (isLoading) {
     return (
       <div className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-card px-6 py-10 text-sm text-muted">
@@ -137,18 +215,18 @@ export function AdminUsersTable() {
                 <th className="px-4 py-3 text-left font-medium text-muted">
                   Date Joined
                 </th>
+                <th className="px-4 py-3 text-left font-medium text-muted">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted">
                   Current Role
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted">
-                  Active Subscription Plan
-                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted">Plan</th>
                 <th className="px-4 py-3 text-left font-medium text-muted">Manage</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {users.map((user) => {
                 const isUpdating = isPending && pendingUserId === user.id;
+                const locked = isRowLocked(user);
 
                 return (
                   <tr key={user.id} className="bg-card/60">
@@ -156,6 +234,9 @@ export function AdminUsersTable() {
                       <p className="min-w-[8rem] font-medium text-foreground">
                         {user.name ?? "Unnamed user"}
                       </p>
+                      {user.isProtected ? (
+                        <p className="mt-1 text-[11px] text-muted">Protected owner</p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-4 align-top">
                       <p className="min-w-[10rem] text-sm text-muted">
@@ -167,11 +248,22 @@ export function AdminUsersTable() {
                     </td>
                     <td className="px-4 py-4 align-top">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                        className={cn(
+                          "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                          statusBadgeClassName(user.status),
+                        )}
+                      >
+                        {getUserStatusLabel(user.status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
                           user.role === "ADMIN"
                             ? "border-violet-500/30 bg-accent-soft text-accent-text"
-                            : "border-border bg-card-muted text-muted"
-                        }`}
+                            : "border-border bg-card-muted text-muted",
+                        )}
                       >
                         {user.role === "ADMIN" ? (
                           <Shield className="h-3 w-3" aria-hidden="true" />
@@ -183,42 +275,119 @@ export function AdminUsersTable() {
                       <PlanBadge plan={user.plan} />
                     </td>
                     <td className="px-4 py-4 align-top">
-                      <div className="flex min-w-[16rem] flex-col gap-3 sm:min-w-[20rem] sm:flex-row">
+                      <div className="flex min-w-[18rem] flex-col gap-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Select
+                            label="Role"
+                            value={user.role}
+                            disabled={isUpdating || locked}
+                            onChange={(event) =>
+                              updateUser(user.id, {
+                                role: event.target.value as Role,
+                              })
+                            }
+                            options={ROLE_OPTIONS.map((option) => ({
+                              value: option.value,
+                              label: option.label,
+                            }))}
+                          />
+                          <Select
+                            label="Plan"
+                            value={user.plan}
+                            disabled={isUpdating}
+                            onChange={(event) =>
+                              updateUser(user.id, {
+                                plan: event.target.value as Plan,
+                              })
+                            }
+                            options={PLAN_OPTIONS.map((option) => ({
+                              value: option.value,
+                              label: getPlanLabel(option.value),
+                            }))}
+                          />
+                        </div>
+
                         <Select
-                          label="Role"
-                          value={user.role}
-                          disabled={isUpdating}
+                          label="Account status"
+                          value={user.status}
+                          disabled={isUpdating || locked}
                           onChange={(event) =>
                             updateUser(user.id, {
-                              role: event.target.value as Role,
+                              status: event.target.value as UserStatus,
                             })
                           }
-                          options={ROLE_OPTIONS.map((option) => ({
+                          options={USER_STATUS_OPTIONS.map((option) => ({
                             value: option.value,
                             label: option.label,
                           }))}
                         />
-                        <Select
-                          label="Plan"
-                          value={user.plan}
-                          disabled={isUpdating}
-                          onChange={(event) =>
-                            updateUser(user.id, {
-                              plan: event.target.value as Plan,
-                            })
-                          }
-                          options={PLAN_OPTIONS.map((option) => ({
-                            value: option.value,
-                            label: getPlanLabel(option.value),
-                          }))}
-                        />
+
+                        <div className="flex flex-wrap gap-2">
+                          {user.status !== "ACTIVE" && !locked ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={isUpdating}
+                              onClick={() =>
+                                updateUser(user.id, { status: "ACTIVE" })
+                              }
+                            >
+                              <UserCheck className="h-3.5 w-3.5" />
+                              Reactivate
+                            </Button>
+                          ) : null}
+
+                          {user.status === "ACTIVE" && !locked ? (
+                            <>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                disabled={isUpdating}
+                                onClick={() =>
+                                  updateUser(user.id, { status: "DEACTIVATED" })
+                                }
+                              >
+                                <UserX className="h-3.5 w-3.5" />
+                                Deactivate
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                disabled={isUpdating}
+                                onClick={() =>
+                                  updateUser(user.id, { status: "BANNED" })
+                                }
+                              >
+                                <Ban className="h-3.5 w-3.5" />
+                                Ban
+                              </Button>
+                            </>
+                          ) : null}
+
+                          {!locked ? (
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              disabled={isUpdating}
+                              onClick={() => deleteUser(user)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          ) : null}
+                        </div>
+
+                        {isUpdating ? (
+                          <p className="flex items-center gap-1 text-xs text-muted">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Saving...
+                          </p>
+                        ) : null}
                       </div>
-                      {isUpdating ? (
-                        <p className="mt-2 flex items-center gap-1 text-xs text-muted">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Saving...
-                        </p>
-                      ) : null}
                     </td>
                   </tr>
                 );

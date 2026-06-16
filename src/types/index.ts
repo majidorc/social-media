@@ -1,7 +1,7 @@
-import type { Plan, Platform, Role, WatermarkPosition, BillingInterval } from "@prisma/client";
+import type { Plan, Platform, Role, UserStatus, WatermarkPosition, BillingInterval } from "@prisma/client";
 import type { PlanFeatures } from "@/lib/plans";
 
-export type { Platform, AiProvider, WatermarkPosition, Plan, Role, BillingInterval } from "@prisma/client";
+export type { Platform, AiProvider, WatermarkPosition, Plan, Role, BillingInterval, UserStatus } from "@prisma/client";
 export type CheckoutPlanType = Extract<Plan, "PRO" | "AGENCY">;
 export type MarketingBillingInterval = "MONTHLY" | "ANNUAL";
 export type { PlanFeatures } from "@/lib/plans";
@@ -163,8 +163,10 @@ export interface AdminUserRecord {
   name: string | null;
   email: string | null;
   role: Role;
+  status: UserStatus;
   plan: Plan;
   createdAt: string;
+  isProtected: boolean;
 }
 
 export interface AdminUsersResponse {
@@ -175,12 +177,19 @@ export interface AdminUpdateUserRequest {
   userId: string;
   role?: Role;
   plan?: Plan;
+  status?: UserStatus;
 }
 
 export interface AdminUpdateUserResponse {
   success: boolean;
   message: string;
   user?: AdminUserRecord;
+}
+
+export interface AdminDeleteUserResponse {
+  success: boolean;
+  message: string;
+  deletedUserId?: string;
 }
 
 export interface CheckoutSessionResponse {

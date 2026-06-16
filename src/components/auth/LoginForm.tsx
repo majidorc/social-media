@@ -11,7 +11,8 @@ import { Suspense, useEffect } from "react";
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   Configuration:
     "Sign-in is not configured correctly. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and NEXTAUTH_URL on the server.",
-  AccessDenied: "Access was denied. Your Google account may not be allowed to sign in.",
+  AccessDenied:
+    "Access was denied. Your account may be deactivated, banned, or not allowed to sign in.",
   Verification: "The sign-in link expired or was already used. Try again.",
   OAuthSignin: "Could not start Google sign-in. Try again in a moment.",
   OAuthCallback:
