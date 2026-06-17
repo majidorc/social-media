@@ -2,7 +2,6 @@
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import { Toast } from "@/components/ui/Toast";
 import { getPlanLabel } from "@/lib/plans";
 import { getUserStatusLabel } from "@/lib/user-status";
@@ -27,6 +26,9 @@ const PLAN_OPTIONS: { value: Plan; label: string }[] = [
   { value: "PRO", label: "Pro" },
   { value: "AGENCY", label: "Agency" },
 ];
+
+const compactSelectClassName =
+  "h-8 min-w-[5.5rem] rounded-md border border-border bg-input px-2 text-xs text-foreground focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30 disabled:cursor-not-allowed disabled:opacity-50";
 
 function formatJoinedDate(isoDate: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -186,7 +188,7 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-card px-6 py-10 text-sm text-muted">
+      <div className="flex min-h-32 items-center justify-center rounded-xl border border-border bg-card px-4 py-8 text-sm text-muted">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         Loading users...
       </div>
@@ -195,7 +197,7 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
 
   if (error) {
     return (
-      <Alert variant="error" className="rounded-2xl">
+      <Alert variant="error" className="rounded-xl">
         {error}
       </Alert>
     );
@@ -203,18 +205,16 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border text-sm">
-            <thead className="bg-card-muted">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">
-                  Date Joined
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted">Actions</th>
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-card-muted/80 text-left text-xs font-medium uppercase tracking-wide text-muted">
+                <th className="px-4 py-2.5 font-medium">User</th>
+                <th className="px-3 py-2.5 font-medium">Status</th>
+                <th className="px-3 py-2.5 font-medium">Role</th>
+                <th className="px-3 py-2.5 font-medium">Plan</th>
+                <th className="px-4 py-2.5 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -223,131 +223,147 @@ export function AdminUsersTable({ currentAdminId }: AdminUsersTableProps) {
                 const locked = isRowLocked(user);
 
                 return (
-                  <tr key={user.id} className="bg-card/60">
-                    <td className="px-4 py-4 align-top">
-                      <p className="min-w-[8rem] font-medium text-foreground">
-                        {user.name ?? "Unnamed user"}
+                  <tr
+                    key={user.id}
+                    className="transition-colors hover:bg-card-muted/40"
+                  >
+                    <td className="px-4 py-2.5">
+                      <div className="flex min-w-[12rem] items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="truncate font-medium text-foreground">
+                              {user.name ?? "Unnamed user"}
+                            </p>
+                            {user.isProtected ? (
+                              <span className="shrink-0 rounded-full border border-violet-500/25 bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-accent-text">
+                                Owner
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="truncate text-xs text-muted">
+                            {user.email ?? "No email"}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-muted/80">
+                        Joined {formatJoinedDate(user.createdAt)}
                       </p>
-                      {user.isProtected ? (
-                        <p className="mt-1 text-[11px] text-muted">Protected owner</p>
-                      ) : null}
                     </td>
-                    <td className="px-4 py-4 align-top">
-                      <p className="min-w-[10rem] text-sm text-muted">
-                        {user.email ?? "No email"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-4 align-top text-muted">
-                      {formatJoinedDate(user.createdAt)}
-                    </td>
-                    <td className="px-4 py-4 align-top">
+                    <td className="px-3 py-2.5">
                       <span
                         className={cn(
-                          "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                          "inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium",
                           statusBadgeClassName(user.status),
                         )}
                       >
                         {getUserStatusLabel(user.status)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 align-top">
-                      <div className="flex min-w-[16rem] flex-col gap-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <Select
-                            label="Role"
-                            value={user.role}
-                            disabled={isUpdating || locked}
-                            onChange={(event) =>
-                              updateUser(user.id, {
-                                role: event.target.value as Role,
-                              })
-                            }
-                            options={ROLE_OPTIONS.map((option) => ({
-                              value: option.value,
-                              label: option.label,
-                            }))}
-                          />
-                          <Select
-                            label="Plan"
-                            value={user.plan}
-                            disabled={isUpdating}
-                            onChange={(event) =>
-                              updateUser(user.id, {
-                                plan: event.target.value as Plan,
-                              })
-                            }
-                            options={PLAN_OPTIONS.map((option) => ({
-                              value: option.value,
-                              label: getPlanLabel(option.value),
-                            }))}
-                          />
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {user.status !== "ACTIVE" && !locked ? (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              disabled={isUpdating}
-                              onClick={() =>
-                                updateUser(user.id, { status: "ACTIVE" })
-                              }
-                            >
-                              <UserCheck className="h-3.5 w-3.5" />
-                              Reactivate
-                            </Button>
-                          ) : null}
-
-                          {user.status === "ACTIVE" && !locked ? (
-                            <>
+                    <td className="px-3 py-2.5">
+                      <select
+                        aria-label={`Role for ${user.email ?? user.name}`}
+                        className={compactSelectClassName}
+                        value={user.role}
+                        disabled={isUpdating || locked}
+                        onChange={(event) =>
+                          updateUser(user.id, {
+                            role: event.target.value as Role,
+                          })
+                        }
+                      >
+                        {ROLE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <select
+                        aria-label={`Plan for ${user.email ?? user.name}`}
+                        className={compactSelectClassName}
+                        value={user.plan}
+                        disabled={isUpdating}
+                        onChange={(event) =>
+                          updateUser(user.id, {
+                            plan: event.target.value as Plan,
+                          })
+                        }
+                      >
+                        {PLAN_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {getPlanLabel(option.value)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center justify-end gap-0.5">
+                        {isUpdating ? (
+                          <span className="inline-flex h-8 w-8 items-center justify-center text-muted">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          </span>
+                        ) : locked ? (
+                          <span className="text-xs text-muted">—</span>
+                        ) : (
+                          <>
+                            {user.status !== "ACTIVE" ? (
                               <Button
                                 type="button"
-                                variant="secondary"
+                                variant="ghost"
                                 size="sm"
+                                className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400"
+                                title="Reactivate"
                                 disabled={isUpdating}
                                 onClick={() =>
-                                  updateUser(user.id, { status: "DEACTIVATED" })
+                                  updateUser(user.id, { status: "ACTIVE" })
                                 }
                               >
-                                <UserX className="h-3.5 w-3.5" />
-                                Deactivate
+                                <UserCheck className="h-3.5 w-3.5" />
                               </Button>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                disabled={isUpdating}
-                                onClick={() =>
-                                  updateUser(user.id, { status: "BANNED" })
-                                }
-                              >
-                                <Ban className="h-3.5 w-3.5" />
-                                Ban
-                              </Button>
-                            </>
-                          ) : null}
-
-                          {!locked ? (
+                            ) : (
+                              <>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  title="Deactivate"
+                                  disabled={isUpdating}
+                                  onClick={() =>
+                                    updateUser(user.id, { status: "DEACTIVATED" })
+                                  }
+                                >
+                                  <UserX className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  title="Ban"
+                                  disabled={isUpdating}
+                                  onClick={() =>
+                                    updateUser(user.id, { status: "BANNED" })
+                                  }
+                                >
+                                  <Ban className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
                             <Button
                               type="button"
-                              variant="danger"
+                              variant="ghost"
                               size="sm"
+                              className="h-8 w-8 p-0 text-red-600 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400"
+                              title="Delete permanently"
                               disabled={isUpdating}
                               onClick={() => deleteUser(user)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                              Delete
                             </Button>
-                          ) : null}
-                        </div>
-
-                        {isUpdating ? (
-                          <p className="flex items-center gap-1 text-xs text-muted">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Saving...
-                          </p>
-                        ) : null}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
