@@ -19,13 +19,14 @@ import {
   getPlatformShareLabel,
   sharePlatformContent,
 } from "@/lib/platform-share";
-import type { GenerationOutputs } from "@/types";
+import type { GenerationOutputs, RegenerateMode } from "@/types";
 import type { Platform } from "@prisma/client";
 import {
   Copy,
   Download,
   ImageIcon,
   Loader2,
+  RefreshCw,
   Share2,
   Sparkles,
   Video,
@@ -41,6 +42,9 @@ interface OutputPanelProps {
   onScheduledChange?: (scheduledFor: string | null) => void;
   outputs: GenerationOutputs | null;
   isLoading: boolean;
+  regeneratingMode?: RegenerateMode | null;
+  onRegenerate?: (mode: RegenerateMode) => void;
+  canRegenerateImage?: boolean;
   error: string | null;
   canSchedule?: boolean;
 }
@@ -53,6 +57,9 @@ export function OutputPanel({
   onScheduledChange,
   outputs,
   isLoading,
+  regeneratingMode = null,
+  onRegenerate,
+  canRegenerateImage = false,
   error,
   canSchedule = true,
 }: OutputPanelProps) {
@@ -151,6 +158,8 @@ export function OutputPanel({
   const hasVideoScript = Boolean(
     outputs?.video?.script?.trim() || outputs?.video?.voiceoverCopy?.trim(),
   );
+  const isBusy = isLoading || regeneratingMode !== null;
+  const canRegenerate = Boolean(workspaceId && onRegenerate && !isBusy);
 
   return (
     <>
@@ -163,7 +172,7 @@ export function OutputPanel({
           <Button
             type="button"
             size="sm"
-            disabled={isSharing}
+            disabled={isSharing || isBusy}
             onClick={() =>
               void handleSharePlatform(
                 activePlatformOutput.platform,
@@ -187,7 +196,7 @@ export function OutputPanel({
           <Loader2 className="h-8 w-8 animate-spin text-accent-text" />
           <p className="text-sm">Generating platform copy and media assets...</p>
         </div>
-      ) : error ? (
+      ) : error && !outputs ? (
         <Alert variant="error" className="p-4">
           {error}
         </Alert>
@@ -201,6 +210,12 @@ export function OutputPanel({
         </div>
       ) : (
         <div className="space-y-5">
+          {error ? (
+            <Alert variant="error" className="px-4 py-2 text-xs">
+              {error}
+            </Alert>
+          ) : null}
+
           <div className="rounded-xl border border-border bg-card-muted p-4">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
               Blended prompt
@@ -230,6 +245,12 @@ export function OutputPanel({
                     </div>
                   </div>
                   <div className="relative aspect-square w-full bg-card-muted">
+                    {regeneratingMode === "image" ? (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-card/80 text-muted">
+                        <Loader2 className="h-7 w-7 animate-spin text-accent-text" />
+                        <p className="text-xs">Regenerating image...</p>
+                      </div>
+                    ) : null}
                     <Image
                       src={outputs.visuals.imageUrl}
                       alt="AI-generated social graphic"
@@ -240,21 +261,39 @@ export function OutputPanel({
                     />
                   </div>
                   <div className="space-y-3 border-t border-border p-4">
-                    <Button
-                      type="button"
-                      className="w-full"
-                      disabled={isDownloadingImage}
-                      onClick={() =>
-                        handleDownloadImage(outputs.visuals?.imageUrl ?? "")
-                      }
-                    >
-                      {isDownloadingImage ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4" />
-                      )}
-                      {isDownloadingImage ? "Downloading..." : "Download image"}
-                    </Button>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={isDownloadingImage || isBusy}
+                        onClick={() =>
+                          handleDownloadImage(outputs.visuals?.imageUrl ?? "")
+                        }
+                      >
+                        {isDownloadingImage ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                        {isDownloadingImage ? "Downloading..." : "Download image"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full"
+                        disabled={!canRegenerate || !canRegenerateImage}
+                        onClick={() => onRegenerate?.("image")}
+                      >
+                        {regeneratingMode === "image" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                        {regeneratingMode === "image"
+                          ? "Regenerating..."
+                          : "Regenerate image"}
+                      </Button>
+                    </div>
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted">
                         Image prompt used
@@ -279,13 +318,31 @@ export function OutputPanel({
                   </div>
                 </article>
               ) : outputs.visualImagePrompt ? (
-                <div className="rounded-xl border border-border bg-card-muted p-4">
+                <div className="space-y-3 rounded-xl border border-border bg-card-muted p-4">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
                     Visual image prompt
                   </p>
                   <p className="text-sm leading-relaxed text-foreground">
                     {outputs.visualImagePrompt}
                   </p>
+                  {canRegenerateImage ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full"
+                      disabled={!canRegenerate}
+                      onClick={() => onRegenerate?.("image")}
+                    >
+                      {regeneratingMode === "image" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {regeneratingMode === "image"
+                        ? "Regenerating..."
+                        : "Regenerate image"}
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
                 <div className="flex min-h-48 items-center justify-center rounded-xl border border-dashed border-border bg-card-muted p-6 text-center">
@@ -440,7 +497,7 @@ export function OutputPanel({
                             type="button"
                             variant="secondary"
                             size="sm"
-                            disabled={isSharing}
+                            disabled={isSharing || isBusy}
                             onClick={() =>
                               void handleSharePlatform(
                                 activePlatformOutput.platform,
@@ -457,9 +514,34 @@ export function OutputPanel({
                           </Button>
                         </div>
                       </div>
+                      {regeneratingMode === "text" ? (
+                        <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-text" />
+                          Regenerating caption...
+                        </div>
+                      ) : null}
                       <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
                         {activePlatformOutput.content}
                       </pre>
+                      <div className="mt-4 border-t border-border pt-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          disabled={!canRegenerate}
+                          onClick={() => onRegenerate?.("text")}
+                        >
+                          {regeneratingMode === "text" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                          {regeneratingMode === "text"
+                            ? "Regenerating..."
+                            : "Regenerate text"}
+                        </Button>
+                      </div>
                     </article>
                   ) : null}
                 </div>

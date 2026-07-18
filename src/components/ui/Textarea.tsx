@@ -1,14 +1,16 @@
 import { cn } from "@/lib/utils";
-import type { TextareaHTMLAttributes } from "react";
+import type { ReactNode, TextareaHTMLAttributes } from "react";
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
+  labelIcon?: ReactNode;
   hint?: string;
 }
 
 export function Textarea({
   className,
   label,
+  labelIcon,
   hint,
   id,
   ...props
@@ -20,8 +22,11 @@ export function Textarea({
       {label ? (
         <label
           htmlFor={textareaId}
-          className="block text-sm font-medium text-foreground"
+          className="flex items-center gap-2 text-sm font-medium text-foreground"
         >
+          {labelIcon ? (
+            <span className="inline-flex text-accent-text">{labelIcon}</span>
+          ) : null}
           {label}
         </label>
       ) : null}

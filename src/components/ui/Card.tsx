@@ -38,6 +38,7 @@ export function Card({ title, description, children, className, actions }: CardP
 
 interface FileDropzoneProps {
   label: string;
+  labelIcon?: ReactNode;
   hint?: string;
   accept?: string;
   urlValue: string;
@@ -48,6 +49,7 @@ interface FileDropzoneProps {
 
 export function FileDropzone({
   label,
+  labelIcon,
   hint,
   accept,
   urlValue,
@@ -57,7 +59,12 @@ export function FileDropzone({
 }: FileDropzoneProps) {
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-foreground">{label}</p>
+      <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+        {labelIcon ? (
+          <span className="inline-flex text-accent-text">{labelIcon}</span>
+        ) : null}
+        {label}
+      </p>
       <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card-muted px-4 py-6 text-center transition-colors hover:border-violet-500/50 hover:bg-card sm:py-8">
         <Upload className="mb-3 h-8 w-8 text-muted" />
         <span className="text-sm font-medium text-foreground">

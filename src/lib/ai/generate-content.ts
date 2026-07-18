@@ -177,6 +177,106 @@ export async function generateContentWithVisuals(
   return result;
 }
 
+export async function regenerateTextOnly(
+  input: GenerationInput,
+  textModel: string,
+  previous: GenerationOutputs,
+  brandProfile?: BrandProfileContext | null,
+): Promise<GenerationOutputs> {
+  const blendedPrompt = buildBlendedPrompt(input);
+  const includeVisualPrompt = Boolean(
+    input.imageModel || previous.visuals || previous.visualImagePrompt,
+  );
+  const includeVideoMetadata = Boolean(input.enableVideo || previous.video);
+  const messages = buildGenerationPrompt(input, blendedPrompt, {
+    includeVisualPrompt,
+    includeVideoMetadata,
+    brandProfile,
+  });
+
+  const textResult = await callTextModel(textModel, messages);
+  const parsed = parseModelJsonResponse(textResult.content);
+
+  const previousImageCount = previous.usage?.imageCount ?? (previous.visuals ? 1 : 0);
+  const previousImageModelId =
+    previous.visuals?.imageModel ?? input.imageModel ?? undefined;
+
+  let result: GenerationOutputs = {
+    platforms: parsed.platforms,
+    blendedPrompt,
+    modelUsed: normalizeModelId(textModel),
+    generatedAt: new Date().toISOString(),
+    visualImagePrompt:
+      parsed.visualImagePrompt?.trim() || previous.visualImagePrompt,
+    visuals: previous.visuals,
+    video: previous.video,
+  };
+
+  if (input.enableVideo && parsed.videoMetadata?.voiceoverText) {
+    result = {
+      ...result,
+      video: {
+        url: previous.video?.url ?? "",
+        script: parsed.videoMetadata.videoScript,
+        voiceoverCopy: parsed.videoMetadata.voiceoverText,
+      },
+    };
+  }
+
+  result = {
+    ...result,
+    usage: buildGenerationUsage({
+      textModelId: textModel,
+      promptTokens: textResult.usage.promptTokens,
+      completionTokens: textResult.usage.completionTokens,
+      imageModelId: previousImageModelId,
+      imageCount: previousImageCount,
+    }),
+  };
+
+  return result;
+}
+
+export async function regenerateImageOnly(
+  input: GenerationInput,
+  imageModel: string,
+  previous: GenerationOutputs,
+  watermarkLogoUrl?: string | null,
+  watermarkPosition?: WatermarkPosition | null,
+): Promise<GenerationOutputs> {
+  const imagePrompt =
+    previous.visuals?.promptUsed?.trim() ||
+    previous.visualImagePrompt?.trim() ||
+    buildFallbackImagePrompt(input, previous.blendedPrompt);
+
+  const visuals = await callImageModel(imageModel, imagePrompt);
+  const watermarkedImageUrl = await applyWatermarkIfConfigured(
+    visuals.imageUrl,
+    watermarkLogoUrl,
+    { position: watermarkPosition },
+  );
+
+  const previousUsage = previous.usage;
+  const textModelId = previous.modelUsed;
+
+  return {
+    ...previous,
+    visualImagePrompt: imagePrompt,
+    generatedAt: new Date().toISOString(),
+    visuals: {
+      ...visuals,
+      imageUrl: watermarkedImageUrl,
+    },
+    usage: buildGenerationUsage({
+      textModelId,
+      promptTokens: previousUsage?.promptTokens ?? 0,
+      completionTokens: previousUsage?.completionTokens ?? 0,
+      imageModelId: imageModel,
+      imageCount: 1,
+    }),
+  };
+}
+
 function buildFallbackImagePrompt(
   input: GenerationInput,
   blendedPrompt: string,

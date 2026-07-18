@@ -23,10 +23,19 @@ import type {
   GenerateResponse,
   GenerationOutputs,
   PlanFeatures,
+  RegenerateMode,
+  RegenerateResponse,
   WorkspaceDetailResponse,
 } from "@/types";
 import Link from "next/link";
-import { Loader2, Sparkles } from "lucide-react";
+import {
+  ImageIcon,
+  Lightbulb,
+  Link2,
+  Loader2,
+  Sparkles,
+  Video,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -67,6 +76,9 @@ export function ContentGenerator({
   const [outputs, setOutputs] = useState<GenerationOutputs | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [regeneratingMode, setRegeneratingMode] = useState<RegenerateMode | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [isInputsExpanded, setIsInputsExpanded] = useState(true);
   const [scheduledFor, setScheduledFor] = useState<string | null>(null);
@@ -274,6 +286,55 @@ export function ContentGenerator({
     }
   };
 
+  const handleRegenerate = async (mode: RegenerateMode) => {
+    if (!workspaceId) {
+      setError("Save a generation first, then regenerate.");
+      return;
+    }
+
+    if (!canGenerate) {
+      setError("Add an API key in Settings before regenerating.");
+      return;
+    }
+
+    if (mode === "image" && !imageModel && !outputs?.visuals?.imageModel) {
+      setError("Pick an image model before regenerating the graphic.");
+      return;
+    }
+
+    setRegeneratingMode(mode);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/generate/${workspaceId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ mode }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Regeneration failed",
+        );
+      }
+
+      const result = data as RegenerateResponse;
+      setOutputs(result.outputs);
+      notifyGenerationHistoryUpdated();
+    } catch (regenerationError) {
+      setError(
+        regenerationError instanceof Error
+          ? regenerationError.message
+          : "Something went wrong",
+      );
+    } finally {
+      setRegeneratingMode(null);
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <header className="space-y-1.5 sm:space-y-2">
@@ -333,6 +394,7 @@ export function ContentGenerator({
             <div className="space-y-5">
               <Textarea
                 label="Idea"
+                labelIcon={<Lightbulb className="h-4 w-4" />}
                 placeholder="Describe your content idea, tone, audience, or draft prompt..."
                 value={idea}
                 onChange={(event) => setIdea(event.target.value)}
@@ -341,6 +403,7 @@ export function ContentGenerator({
 
               <FileDropzone
                 label="Image"
+                labelIcon={<ImageIcon className="h-4 w-4" />}
                 hint="Optional — upload a reference image or paste a public URL."
                 accept="image/*"
                 urlValue={imageUrl}
@@ -353,6 +416,7 @@ export function ContentGenerator({
 
               <Input
                 label="Link"
+                labelIcon={<Link2 className="h-4 w-4" />}
                 type="url"
                 placeholder="https://example.com/article"
                 value={linkUrl}
@@ -362,6 +426,7 @@ export function ContentGenerator({
 
               <FileDropzone
                 label="Video"
+                labelIcon={<Video className="h-4 w-4" />}
                 hint="Optional — upload a reference video or paste a public URL."
                 accept="video/*"
                 urlValue={videoUrl}
@@ -444,6 +509,11 @@ export function ContentGenerator({
             onScheduledChange={setScheduledFor}
             outputs={outputs}
             isLoading={isLoading || isLoadingHistory}
+            regeneratingMode={regeneratingMode}
+            onRegenerate={handleRegenerate}
+            canRegenerateImage={Boolean(
+              imageModel || outputs?.visuals?.imageModel,
+            )}
             error={error}
             canSchedule={planFeatures.canUsePlanner}
           />

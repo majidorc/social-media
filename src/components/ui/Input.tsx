@@ -1,12 +1,20 @@
 import { cn } from "@/lib/utils";
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  labelIcon?: ReactNode;
   hint?: string;
 }
 
-export function Input({ className, label, hint, id, ...props }: InputProps) {
+export function Input({
+  className,
+  label,
+  labelIcon,
+  hint,
+  id,
+  ...props
+}: InputProps) {
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
 
   return (
@@ -14,8 +22,11 @@ export function Input({ className, label, hint, id, ...props }: InputProps) {
       {label ? (
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-foreground"
+          className="flex items-center gap-2 text-sm font-medium text-foreground"
         >
+          {labelIcon ? (
+            <span className="inline-flex text-accent-text">{labelIcon}</span>
+          ) : null}
           {label}
         </label>
       ) : null}

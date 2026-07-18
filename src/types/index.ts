@@ -94,6 +94,14 @@ export interface GenerateResponse {
   outputs: GenerationOutputs;
 }
 
+export type RegenerateMode = "text" | "image";
+
+export interface RegenerateResponse {
+  workspaceId: string;
+  mode: RegenerateMode;
+  outputs: GenerationOutputs;
+}
+
 export interface WorkspaceHistoryItem {
   id: string;
   idea: string | null;
