@@ -43,7 +43,10 @@ function buildJsonShape(
     {
       "platform": "INSTAGRAM",
       "content": "full post text",
-      "metadata": { "hook": "optional hook" }
+      "metadata": {
+        "hook": "optional hook",
+        "alt_text": "accessibility description of the photo for screen readers"
+      }
     }
   ]`,
   ];
@@ -114,6 +117,7 @@ Rules:
 - Twitter/X must respect character limits.
 - Instagram should include a hook and optional CapCut/video script notes.
 - Instagram must use at most 5 hashtags total — never dump long hashtag lists.
+- For Instagram, always include metadata.alt_text: 1–2 short sentences describing the photo for people with visual impairments (what is shown, setting, mood). No hashtags in alt text.
 - LinkedIn should use a professional, thought-leadership tone.${visualPromptRule}${videoMetadataRule}${brandContextRule}
 
 JSON shape:
@@ -178,11 +182,23 @@ export function parseModelJsonResponse(raw: string): {
   const voiceoverText = parsed.video_metadata?.voiceover_text?.trim();
 
   return {
-    platforms: parsed.platforms.map((item) =>
-      item.platform === "INSTAGRAM"
-        ? { ...item, content: limitInstagramHashtags(item.content) }
-        : item,
-    ),
+    platforms: parsed.platforms.map((item) => {
+      if (item.platform !== "INSTAGRAM") {
+        return item;
+      }
+
+      const altText = normalizeAltText(item.metadata);
+      const metadata = {
+        ...(item.metadata ?? {}),
+        ...(altText ? { alt_text: altText } : {}),
+      };
+
+      return {
+        ...item,
+        content: limitInstagramHashtags(item.content),
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      };
+    }),
     visualImagePrompt: visualImagePrompt || undefined,
     videoMetadata:
       videoScript && voiceoverText
@@ -193,6 +209,24 @@ export function parseModelJsonResponse(raw: string): {
 
 const INSTAGRAM_HASHTAG_LIMIT = 5;
 const HASHTAG_PATTERN = /#[\w\u00C0-\u024F\u1E00-\u1EFF]+/gu;
+
+function normalizeAltText(
+  metadata?: Record<string, string | number | boolean>,
+): string | undefined {
+  if (!metadata) {
+    return undefined;
+  }
+
+  const raw =
+    metadata.alt_text ?? metadata.altText ?? metadata["alt text"] ?? undefined;
+
+  if (typeof raw !== "string") {
+    return undefined;
+  }
+
+  const trimmed = raw.trim();
+  return trimmed || undefined;
+}
 
 /** Keep first N hashtags; strip the rest so captions stay tight. */
 export function limitInstagramHashtags(
@@ -211,4 +245,10 @@ export function limitInstagramHashtags(
     .replace(/\n{3,}/g, "\n\n")
     .replace(/ {2,}/g, " ")
     .trim();
+}
+
+export function getInstagramAltText(
+  metadata?: Record<string, string | number | boolean>,
+): string | null {
+  return normalizeAltText(metadata) ?? null;
 }

@@ -11,7 +11,7 @@ export const PLATFORM_OPTIONS: {
   {
     value: "INSTAGRAM",
     label: "Instagram",
-    description: "Hooks, captions, and at most 5 hashtags",
+    description: "Hooks, captions, ≤5 hashtags, and photo alt text",
   },
   {
     value: "TWITTER",

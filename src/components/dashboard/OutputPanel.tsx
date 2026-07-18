@@ -15,6 +15,7 @@ import {
   buildImageDownloadFilename,
   downloadImageAsset,
 } from "@/lib/download-image";
+import { getInstagramAltText } from "@/lib/ai/prompts";
 import {
   getPlatformShareLabel,
   sharePlatformContent,
@@ -67,6 +68,7 @@ export function OutputPanel({
   const [activePlatform, setActivePlatform] = useState<Platform | null>(null);
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [copiedAltText, setCopiedAltText] = useState(false);
   const [copiedVideoScript, setCopiedVideoScript] = useState(false);
   const [copiedVoiceover, setCopiedVoiceover] = useState(false);
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
@@ -160,6 +162,10 @@ export function OutputPanel({
   );
   const isBusy = isLoading || regeneratingMode !== null;
   const canRegenerate = Boolean(workspaceId && onRegenerate && !isBusy);
+  const instagramAltText =
+    activePlatformOutput?.platform === "INSTAGRAM"
+      ? getInstagramAltText(activePlatformOutput.metadata)
+      : null;
 
   return (
     <>
@@ -523,6 +529,35 @@ export function OutputPanel({
                       <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
                         {activePlatformOutput.content}
                       </pre>
+                      {instagramAltText ? (
+                        <div className="mt-4 rounded-lg border border-border bg-card p-3">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-foreground">
+                                Alt text
+                              </p>
+                              <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+                                Describes your photo for people with visual
+                                impairments. Use this on Instagram or write your
+                                own.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void copyText(instagramAltText, setCopiedAltText)
+                              }
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-card-muted hover:text-foreground"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              {copiedAltText ? "Copied" : "Copy"}
+                            </button>
+                          </div>
+                          <p className="text-sm leading-relaxed text-foreground">
+                            {instagramAltText}
+                          </p>
+                        </div>
+                      ) : null}
                       <div className="mt-4 border-t border-border pt-3">
                         <Button
                           type="button"
