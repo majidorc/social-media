@@ -1,4 +1,7 @@
-import { buildGenerationUsage } from "@/lib/ai/cost-calculator";
+import {
+  accumulateGenerationUsage,
+  buildGenerationUsage,
+} from "@/lib/ai/cost-calculator";
 import {
   buildBlendedPrompt,
   buildGenerationPrompt,
@@ -197,10 +200,6 @@ export async function regenerateTextOnly(
   const textResult = await callTextModel(textModel, messages);
   const parsed = parseModelJsonResponse(textResult.content);
 
-  const previousImageCount = previous.usage?.imageCount ?? (previous.visuals ? 1 : 0);
-  const previousImageModelId =
-    previous.visuals?.imageModel ?? input.imageModel ?? undefined;
-
   let result: GenerationOutputs = {
     platforms: parsed.platforms,
     blendedPrompt,
@@ -223,15 +222,16 @@ export async function regenerateTextOnly(
     };
   }
 
+  const textIncrement = buildGenerationUsage({
+    textModelId: textModel,
+    promptTokens: textResult.usage.promptTokens,
+    completionTokens: textResult.usage.completionTokens,
+    imageCount: 0,
+  });
+
   result = {
     ...result,
-    usage: buildGenerationUsage({
-      textModelId: textModel,
-      promptTokens: textResult.usage.promptTokens,
-      completionTokens: textResult.usage.completionTokens,
-      imageModelId: previousImageModelId,
-      imageCount: previousImageCount,
-    }),
+    usage: accumulateGenerationUsage(previous.usage, textIncrement),
   };
 
   return result;
@@ -256,8 +256,13 @@ export async function regenerateImageOnly(
     { position: watermarkPosition },
   );
 
-  const previousUsage = previous.usage;
-  const textModelId = previous.modelUsed;
+  const imageIncrement = buildGenerationUsage({
+    textModelId: previous.modelUsed,
+    promptTokens: 0,
+    completionTokens: 0,
+    imageModelId: imageModel,
+    imageCount: 1,
+  });
 
   return {
     ...previous,
@@ -267,13 +272,7 @@ export async function regenerateImageOnly(
       ...visuals,
       imageUrl: watermarkedImageUrl,
     },
-    usage: buildGenerationUsage({
-      textModelId,
-      promptTokens: previousUsage?.promptTokens ?? 0,
-      completionTokens: previousUsage?.completionTokens ?? 0,
-      imageModelId: imageModel,
-      imageCount: 1,
-    }),
+    usage: accumulateGenerationUsage(previous.usage, imageIncrement),
   };
 }
 

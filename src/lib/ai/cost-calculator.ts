@@ -104,6 +104,22 @@ export function buildGenerationUsage(input: {
   };
 }
 
+/** Add a regen step's usage onto the workspace running total. */
+export function accumulateGenerationUsage(
+  previous: GenerationUsage | undefined,
+  increment: GenerationUsage,
+): GenerationUsage {
+  return {
+    promptTokens: (previous?.promptTokens ?? 0) + increment.promptTokens,
+    completionTokens:
+      (previous?.completionTokens ?? 0) + increment.completionTokens,
+    imageCount: (previous?.imageCount ?? 0) + increment.imageCount,
+    totalCost: Number(
+      ((previous?.totalCost ?? 0) + increment.totalCost).toFixed(6),
+    ),
+  };
+}
+
 export function formatUsageCost(totalCost: number): string {
   if (totalCost < 0.01) {
     return `$${totalCost.toFixed(4)}`;
