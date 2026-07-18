@@ -25,6 +25,8 @@ import type {
   GenerationHistoryResponse,
 } from "@/types";
 
+export const maxDuration = 300;
+
 const optionalUrl = z
   .string()
   .trim()

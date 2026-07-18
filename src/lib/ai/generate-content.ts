@@ -22,6 +22,7 @@ import {
   callVideoOrTtsAPI,
 } from "@/lib/ai/providers";
 import { applyWatermarkIfConfigured } from "@/lib/image/watermark";
+import { optimizeGeneratedImageDataUrl } from "@/lib/image/optimize";
 import type { BrandProfileContext } from "@/lib/brand-profile";
 import type { GenerationInput, GenerationOutputs } from "@/types";
 import type { WatermarkPosition } from "@prisma/client";
@@ -131,13 +132,15 @@ export async function generateContentWithVisuals(
       watermarkLogoUrl,
       { position: watermarkPosition },
     );
+    const optimizedImageUrl =
+      await optimizeGeneratedImageDataUrl(watermarkedImageUrl);
 
     result = {
       ...result,
       visualImagePrompt: imagePrompt,
       visuals: {
         ...visuals,
-        imageUrl: watermarkedImageUrl,
+        imageUrl: optimizedImageUrl,
       },
     };
   }
@@ -255,6 +258,8 @@ export async function regenerateImageOnly(
     watermarkLogoUrl,
     { position: watermarkPosition },
   );
+  const optimizedImageUrl =
+    await optimizeGeneratedImageDataUrl(watermarkedImageUrl);
 
   const imageIncrement = buildGenerationUsage({
     textModelId: previous.modelUsed,
@@ -270,7 +275,7 @@ export async function regenerateImageOnly(
     generatedAt: new Date().toISOString(),
     visuals: {
       ...visuals,
-      imageUrl: watermarkedImageUrl,
+      imageUrl: optimizedImageUrl,
     },
     usage: accumulateGenerationUsage(previous.usage, imageIncrement),
   };

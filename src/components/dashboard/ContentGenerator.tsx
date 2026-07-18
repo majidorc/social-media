@@ -145,6 +145,11 @@ export function ContentGenerator({
         };
 
         if (!response.ok) {
+          if (response.status === 502 || response.status === 504) {
+            throw new Error(
+              "Server timed out loading this generation. Refresh once — oversized images are being compressed.",
+            );
+          }
           throw new Error(data.error ?? "Failed to load generation.");
         }
 
@@ -316,6 +321,11 @@ export function ContentGenerator({
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 502 || response.status === 504) {
+          throw new Error(
+            "Regeneration timed out (proxy/server). Try again — images are now compressed for smaller responses.",
+          );
+        }
         throw new Error(
           typeof data.error === "string" ? data.error : "Regeneration failed",
         );

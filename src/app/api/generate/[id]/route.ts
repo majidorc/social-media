@@ -12,6 +12,10 @@ import {
 } from "@/lib/ai/generate-content";
 import { getSettings } from "@/lib/actions/settings";
 import { requireCurrentUser } from "@/lib/get-current-user";
+import {
+  isOversizedDataUrl,
+  optimizeGeneratedImageDataUrl,
+} from "@/lib/image/optimize";
 import { prisma } from "@/lib/prisma";
 import { deleteWorkspaceForUser } from "@/lib/workspace-delete";
 import {
@@ -21,9 +25,12 @@ import {
 import type {
   DeleteWorkspaceResponse,
   GenerationInput,
+  GenerationOutputs,
   RegenerateResponse,
   WorkspaceDetailResponse,
 } from "@/types";
+
+export const maxDuration = 300;
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -32,6 +39,31 @@ interface RouteContext {
 const regenerateSchema = z.object({
   mode: z.enum(["text", "image"]),
 });
+
+async function shrinkOversizedVisuals(
+  outputs: GenerationOutputs,
+): Promise<{ outputs: GenerationOutputs; changed: boolean }> {
+  const imageUrl = outputs.visuals?.imageUrl;
+  if (!imageUrl || !isOversizedDataUrl(imageUrl)) {
+    return { outputs, changed: false };
+  }
+
+  const optimizedImageUrl = await optimizeGeneratedImageDataUrl(imageUrl);
+  if (optimizedImageUrl === imageUrl) {
+    return { outputs, changed: false };
+  }
+
+  return {
+    outputs: {
+      ...outputs,
+      visuals: {
+        ...outputs.visuals!,
+        imageUrl: optimizedImageUrl,
+      },
+    },
+    changed: true,
+  };
+}
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
@@ -49,8 +81,24 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Generation not found." }, { status: 404 });
     }
 
+    let outputs = parseGenerationOutputs(workspace.outputs);
+    const shrunk = await shrinkOversizedVisuals(outputs);
+
+    if (shrunk.changed) {
+      outputs = shrunk.outputs;
+      await prisma.contentWorkspace.update({
+        where: { id: workspace.id },
+        data: {
+          outputs: outputs as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
+
     const response: WorkspaceDetailResponse = {
-      workspace: toWorkspaceDetail(workspace),
+      workspace: {
+        ...toWorkspaceDetail(workspace),
+        outputs,
+      },
     };
 
     return NextResponse.json(response);

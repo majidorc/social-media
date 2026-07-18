@@ -83,23 +83,18 @@ export async function applyWatermark(
     padding,
   );
 
-  const outputFormat = baseMetadata.format === "jpeg" ? "jpeg" : "png";
-  const composited = sharp(baseImageBuffer).composite([
-    {
-      input: logoBuffer,
-      top,
-      left,
-    },
-  ]);
+  const outputBuffer = await sharp(baseImageBuffer)
+    .composite([
+      {
+        input: logoBuffer,
+        top,
+        left,
+      },
+    ])
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toBuffer();
 
-  const outputBuffer =
-    outputFormat === "jpeg"
-      ? await composited.jpeg({ quality: 90 }).toBuffer()
-      : await composited.png().toBuffer();
-
-  const mimeType = outputFormat === "jpeg" ? "image/jpeg" : "image/png";
-
-  return `data:${mimeType};base64,${outputBuffer.toString("base64")}`;
+  return `data:image/jpeg;base64,${outputBuffer.toString("base64")}`;
 }
 
 export interface ApplyWatermarkIfConfiguredOptions {
