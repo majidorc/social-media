@@ -113,6 +113,7 @@ Rules:
 - Each platform gets unique, tailored copy (not copy-paste).
 - Twitter/X must respect character limits.
 - Instagram should include a hook and optional CapCut/video script notes.
+- Instagram must use at most 5 hashtags total — never dump long hashtag lists.
 - LinkedIn should use a professional, thought-leadership tone.${visualPromptRule}${videoMetadataRule}${brandContextRule}
 
 JSON shape:
@@ -177,11 +178,37 @@ export function parseModelJsonResponse(raw: string): {
   const voiceoverText = parsed.video_metadata?.voiceover_text?.trim();
 
   return {
-    platforms: parsed.platforms,
+    platforms: parsed.platforms.map((item) =>
+      item.platform === "INSTAGRAM"
+        ? { ...item, content: limitInstagramHashtags(item.content) }
+        : item,
+    ),
     visualImagePrompt: visualImagePrompt || undefined,
     videoMetadata:
       videoScript && voiceoverText
         ? { videoScript, voiceoverText }
         : undefined,
   };
+}
+
+const INSTAGRAM_HASHTAG_LIMIT = 5;
+const HASHTAG_PATTERN = /#[\w\u00C0-\u024F\u1E00-\u1EFF]+/gu;
+
+/** Keep first N hashtags; strip the rest so captions stay tight. */
+export function limitInstagramHashtags(
+  content: string,
+  max = INSTAGRAM_HASHTAG_LIMIT,
+): string {
+  let kept = 0;
+
+  const trimmed = content.replace(HASHTAG_PATTERN, (match) => {
+    kept += 1;
+    return kept <= max ? match : "";
+  });
+
+  return trimmed
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/ {2,}/g, " ")
+    .trim();
 }
